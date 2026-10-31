@@ -405,7 +405,7 @@ b,.num{font-variant-numeric:tabular-nums}
 #lock,#splash{position:absolute;inset:0;z-index:90;background:var(--bg);display:flex;align-items:center;justify-content:center;transition:opacity .25s}
 #lock.out,#splash.out{opacity:0;pointer-events:none}
 .lk-in{display:flex;flex-direction:column;align-items:center;width:100%;max-width:300px}
-.logo{width:64px;height:64px;border-radius:22px;background:var(--hero);color:#fff;display:grid;place-items:center}
+.applogo{width:64px;height:64px;border-radius:22px;background:var(--hero);color:#fff;display:grid;place-items:center}
 .lk-t{font-size:18px;font-weight:600;margin:16px 0 4px}
 .pinsheet{display:flex;flex-direction:column;align-items:center;padding:10px 0 4px}
 .pdots{display:flex;gap:16px;margin:14px 0 6px}
@@ -437,7 +437,7 @@ b,.num{font-variant-numeric:tabular-nums}
 <nav id="nav"></nav>
 <div id="layers"></div>
 <div id="toast"></div>
-<div id="splash"><div class="sp-in"><div class="logo" id="sp-logo"></div><div class="spin"></div><span id="sp-msg">Memuat data…</span></div></div>
+<div id="splash"><div class="sp-in"><div class="applogo" id="sp-logo"></div><div class="spin"></div><span id="sp-msg">Memuat data…</span></div></div>
 
 <script>
 /* ========================= Ikon (set duotone khusus DompetKu) =========================
@@ -2279,7 +2279,7 @@ function showLock(first) {
   if ($('#lock')) return;
   const el = document.createElement('div');
   el.id = 'lock';
-  el.innerHTML = `<div class="lk-in"><div class="logo">${ic('wallet', 30)}</div><div class="lk-t">Masukkan PIN</div>${pinPad()}</div>`;
+  el.innerHTML = `<div class="lk-in"><div class="applogo">${ic('wallet', 30)}</div><div class="lk-t">Masukkan PIN</div>${pinPad()}</div>`;
   document.body.appendChild(el);
   bindPinPad(el, async (pin, fail, note) => {
     note('Memeriksa…');
