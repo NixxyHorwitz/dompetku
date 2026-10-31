@@ -320,7 +320,7 @@ b,.num{font-variant-numeric:tabular-nums}
 .amt input{width:1ch;min-width:1ch;max-width:calc(100% - 40px);padding-right:2px;border:0;background:none;outline:0;font-size:38px;font-weight:600;text-align:center;caret-color:var(--accent);font-variant-numeric:tabular-nums}
 .amt-box.exp .amt input{color:var(--exp)} .amt-box.inc .amt input{color:var(--inc)}
 .cgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.deck2{position:relative;touch-action:none;user-select:none;-webkit-user-select:none}
+.deck2{position:relative;isolation:isolate;touch-action:none;user-select:none;-webkit-user-select:none}
 .deck2 .lcard{position:absolute;left:0;right:0;top:0;transform-origin:50% 0;will-change:transform,opacity;backface-visibility:hidden}
 .lc-body{position:absolute;inset:0;padding:16px 18px;display:flex;flex-direction:column;justify-content:space-between;z-index:1}
 .lc-peek{position:absolute;left:0;right:0;top:0;padding:9px 18px;display:flex;justify-content:space-between;font-size:12.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;z-index:2;opacity:0;pointer-events:none}
@@ -359,6 +359,14 @@ b,.num{font-variant-numeric:tabular-nums}
 .meta select,.meta input[type=date]{position:absolute;inset:0;opacity:0;width:100%;height:100%;font-size:16px}
 .meta.fee input{width:76px;border:0;background:none;outline:0;color:var(--text);font-size:16px;padding:0}
 .meta.fee span{color:var(--sub)}
+.irow{display:flex;align-items:center;gap:11px;background:var(--card);border-radius:16px;padding:11px 13px}
+.irow>span{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.irow b{font-size:14px;font-weight:600}
+.irow small{font-size:12px;color:var(--sub)}
+.irow em{font-style:normal;font-weight:600;font-size:14px;white-space:nowrap}
+.ibox{margin:8px 6px 0;font-size:12.5px;color:var(--sub);line-height:1.5}
+.ibox b{color:var(--text);font-weight:600}
+.ibox .btn{margin-top:8px;height:40px;font-size:14px}
 .tv{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;padding:6px 0 2px}
 .tv-amt{font-size:32px;font-weight:600;margin-top:6px;font-variant-numeric:tabular-nums}
 .tv-amt.exp{color:var(--exp)} .tv-amt.inc{color:var(--inc)}
@@ -707,8 +715,19 @@ const SYS_CATS = {
   __val:{ id:'__val', name:'Perubahan Nilai', icon:'trend', color:'#A855F7' },
   __debt:{ id:'__debt', name:'Utang & Piutang', icon:'loan', color:'#14B8A6' },
   __fee:{ id:'__fee', name:'Biaya Transfer', icon:'receipt', color:'#8C8F99', group:'oblig' },
-  __trf:{ id:'__trf', name:'Transfer', icon:'swap', color:'#0EA5E9' }
+  __trf:{ id:'__trf', name:'Transfer', icon:'swap', color:'#0EA5E9' },
+  __int:{ id:'__int', name:'Bunga Bank', icon:'coins', color:'#22C55E', group:'other' }
 };
+// Bunga harian rekening bank/tabungan (sama dengan perhitungan di server).
+const INT_TYPES = ['bank', 'saving'], INT_TAX = .2, INT_TAX_MIN = 7500000;
+const dailyInterest = (bal, bp, tax) => bal <= 0 || bp <= 0 ? 0 : Math.round(bal * bp / 10000 / 365 * (tax && bal > INT_TAX_MIN ? 1 - INT_TAX : 1));
+// Kebalikannya: perkiraan saldo dari bunga yang diterima per hari.
+function balFromInterest(daily, bp, tax) {
+  if (!daily || !bp) return 0;
+  const gross = daily * 365 * 10000 / bp, taxed = gross / (1 - INT_TAX);
+  return Math.round(tax && taxed > INT_TAX_MIN ? taxed : gross);
+}
+const rateTxt = bp => (bp / 100).toLocaleString('id-ID', { maximumFractionDigits:2 }) + '%';
 const NONREPORT = ['__adj', '__val', '__debt'];
 // "Bersama siapa": konteks transaksi (sendiri / pasangan / teman / keluarga / kerja), ikut terdeteksi dari catatan.
 const WITH = [['', 'Sendiri', 'user'], ['pacar', 'Pasangan', 'care'], ['teman', 'Teman', 'users'], ['keluarga', 'Keluarga', 'home'], ['kerja', 'Kerja', 'briefcase']];
@@ -2103,6 +2122,10 @@ function openWallet(id) {
     </div>
     ${mid}
     <div class="strip mt">${cells.map(c => `<div><small>${c[0]}</small><b class="${c[2]}">${c[1]}</b></div>`).join('')}</div>
+    ${w.rateBp > 0 && INT_TYPES.includes(w.type) ? (() => {
+      const mInt = L.filter(t => t.categoryId === '__int' && t.walletId === id && t.date.slice(0, 7) === thisMonth()).reduce((s, t) => s + t.amount, 0);
+      return `<div class="irow mt">${itile('coins', '#22C55E', 'sm')}<span><b>Bunga ${rateTxt(w.rateBp)} p.a.${w.rateTax ? ' · pajak 20%' : ''}</b><small>≈ ${money(dailyInterest(b, w.rateBp, w.rateTax))}/hari · masuk otomatis tiap hari</small></span><em class="inc">${mInt ? '+' + money(mInt) : ''}</em></div>`;
+    })() : ''}
     ${L.length ? groupedTx(L.slice(0, 150), { wallet:id }) : `<div class="mt">${empty('receipt', 'Belum ada transaksi')}</div>`}`;
   };
   el._refresh();
@@ -2114,6 +2137,7 @@ function openWalletForm(w, presetType) {
   const f = w ? Object.assign({}, w) : { id:uid(), name:'', type:type0, color:COLORS[D.wallets.length % COLORS.length], initial:0, limit:0, logo:'', sub:type0 === 'invest' ? 'Reksadana' : '',
     archived:false, order:D.wallets.length, createdAt:new Date().toISOString() };
   const el = openSheet({ title:edit ? 'Edit Akun' : 'Akun Baru', right:'Simpan', onRight:save });
+  const st = { daily:0, est:0 };
   const draw = () => {
     const g = wt(f).g;
     const initLabel = g === 'credit' ? 'Tagihan awal' : g === 'invest' ? 'Modal / nilai awal' : 'Saldo awal';
@@ -2128,6 +2152,12 @@ function openWalletForm(w, presetType) {
       <div class="field"><label>${initLabel}</label><input id="w-init" inputmode="numeric" placeholder="Rp0" value="${fmtNum(Math.max(0, initVal))}"></div>
       ${g === 'credit' ? `<div class="field"><label>Limit kredit</label><input id="w-limit" inputmode="numeric" placeholder="Rp0" value="${fmtNum(f.limit)}"></div>` : ''}
     </div>
+    ${INT_TYPES.includes(f.type) ? `<div class="flabel">Bunga harian</div>
+    <div class="group">
+      <div class="field"><label>Bunga % p.a.</label><input id="w-rate" inputmode="decimal" placeholder="mis. 3,75" value="${f.rateBp ? String(f.rateBp / 100).replace('.', ',') : ''}"></div>
+      <div class="field"><label>Potong pajak 20%</label><span style="flex:1"></span><button class="toggle ${f.rateTax ? 'on' : ''}" data-f="tax"></button></div>
+      <div class="field"><label>Bunga diterima/hari</label><input id="w-daily" inputmode="numeric" placeholder="opsional" value="${fmtNum(st.daily)}"></div>
+    </div><div class="ibox" id="w-ibox"></div>` : ''}
     <div class="flabel">Logo</div>${logoPicker(f.logo || '', itile(wt(f).i, f.color, 'sm'))}
     <div class="flabel">Warna</div>
     <div class="group"><div class="swatches">${COLORS.map(c => `<button class="sw ${f.color === c ? 'on' : ''}" style="background:${c}" data-f="color" data-v="${c}"></button>`).join('')}</div></div>
@@ -2139,6 +2169,29 @@ function openWalletForm(w, presetType) {
     const init = el.body.querySelector('#w-init');
     init.oninput = () => { const v = digits(init.value); init.value = fmtNum(v); f.initial = g === 'credit' ? -v : v; };
     const lim = el.body.querySelector('#w-limit'); if (lim) lim.oninput = () => { f.limit = digits(lim.value); lim.value = fmtNum(f.limit); };
+    const rate = el.body.querySelector('#w-rate');
+    if (rate) {
+      rate.oninput = () => { const v = parseFloat(rate.value.replace(',', '.')); f.rateBp = isFinite(v) ? Math.max(0, Math.min(5000, Math.round(v * 100))) : 0; drawInt(); };
+      const dl = el.body.querySelector('#w-daily');
+      dl.oninput = () => { st.daily = digits(dl.value); dl.value = fmtNum(st.daily); drawInt(); };
+      init.addEventListener('input', drawInt);
+      drawInt();
+    }
+  };
+  // Ringkasan bunga: perkiraan bunga per hari dari saldo, atau perkiraan saldo dari bunga harian yang diterima.
+  const drawInt = () => {
+    const box = el.body.querySelector('#w-ibox'); if (!box) return;
+    const bal = edit ? balances()[f.id] || 0 : f.initial, bp = f.rateBp || 0;
+    if (!bp) { box.innerHTML = 'Isi bunga dari bank (cek di aplikasi bank), lalu bunga ditambahkan otomatis ke saldo setiap hari.'; return; }
+    const d = dailyInterest(bal, bp, f.rateTax);
+    let h = `Saldo ${money(bal)} → bunga ≈ <b>${money(d)}/hari</b> · ${money(d * 30)}/bulan. Ditambahkan otomatis setiap hari${f.rateTax ? '; pajak 20% dipotong bila saldo di atas Rp7,5 jt' : ''}.`;
+    if (st.daily) {
+      const est = balFromInterest(st.daily, bp, f.rateTax), step = Math.round(365 * 10000 / bp / (f.rateTax && est > INT_TAX_MIN ? 1 - INT_TAX : 1) / 2);
+      h += `<br>Bunga <b>${money(st.daily)}/hari</b> di ${rateTxt(bp)} p.a. berarti saldomu ≈ <b>${money(est)}</b> (± ${money(step)}).`;
+      if (Math.abs(est - bal) > step) h += `<button class="btn" data-f="usebal">${ic('refresh', 16)}${edit ? 'Koreksi saldo ke ' : 'Pakai sebagai saldo awal '}${money(est)}</button>`;
+      st.est = est;
+    }
+    box.innerHTML = h;
   };
   el.body.addEventListener('click', async e => {
     const b = e.target.closest('[data-f]'); if (!b) return;
@@ -2147,6 +2200,11 @@ function openWalletForm(w, presetType) {
     if (b.dataset.f === 'logo') { f.logo = b.dataset.v; draw(); }
     if (b.dataset.f === 'upload') uploadLogo(f.name).then(k => { if (k) { f.logo = k; draw(); } });
     if (b.dataset.f === 'arch') { f.archived = !f.archived; b.classList.toggle('on', f.archived); }
+    if (b.dataset.f === 'tax') { f.rateTax = !f.rateTax; b.classList.toggle('on', f.rateTax); drawInt(); }
+    if (b.dataset.f === 'usebal') {
+      if (!edit) { f.initial = st.est; const i = el.body.querySelector('#w-init'); if (i) i.value = fmtNum(st.est); drawInt(); return; }
+      const est = st.est; save(); if (f.name) setTimeout(() => openAdjust(f.id, false, est), 260);
+    }
     if (b.dataset.f === 'del') {
       if (D.goals.some(g => g.walletId === f.id) || D.recurring.some(r => r.walletId === f.id || r.toWalletId === f.id))
         return toast('Akun dipakai goal / transaksi berulang', true);
@@ -2166,6 +2224,8 @@ function openWalletForm(w, presetType) {
     if (!f.name) return toast('Isi nama akun', true);
     if (wt(f).g !== 'credit') f.limit = 0;
     if (wt(f).g !== 'invest') f.sub = '';
+    if (!INT_TYPES.includes(f.type) || !(f.rateBp > 0)) Object.assign(f, { rateBp:0, rateTax:false, rateFrom:'' });
+    else if (!(w && w.rateBp > 0) || !f.rateFrom) f.rateFrom = today(); // bunga mulai dihitung dari hari ini
     const o = Object.assign({}, f);
     closeSheet(el);
     persist([['saveWallet', o]], () => upsertLocal(D.wallets, o), edit ? 'Akun diperbarui' : 'Akun ditambahkan');
@@ -2174,9 +2234,9 @@ function openWalletForm(w, presetType) {
 }
 
 // Koreksi saldo (akun biasa) atau update nilai pasar (investasi).
-function openAdjust(id, isVal) {
+function openAdjust(id, isVal, preset) {
   const w = wal(id), g = wGroup(w), cur = balances()[id] || 0, credit = g === 'credit';
-  let target = credit ? -cur : cur;
+  let target = preset != null ? preset : credit ? -cur : cur;
   const el = openSheet({ title:isVal ? 'Update Nilai' : 'Koreksi Saldo', right:'Simpan', onRight:save });
   el.body.innerHTML = `<div class="amt-box"><small>${isVal ? 'Nilai pasar saat ini' : credit ? 'Tagihan sebenarnya' : 'Saldo sebenarnya'}</small>
       <div class="amt"><span>Rp</span><input id="a-val" inputmode="numeric" placeholder="0" value="${fmtNum(target)}"></div></div>
@@ -2599,7 +2659,7 @@ const Mock = (() => {
     const now = new Date().toISOString();
     const W = (id, name, type, color, initial, extra) => Object.assign({ id, name, type, color, initial, archived:false, order:+id.slice(1), createdAt:now, limit:0, sub:'' }, extra);
     const wallets = [
-      W('w1', 'Tunai', 'cash', '#22C55E', 450000), W('w2', 'BCA', 'bank', '#3B82F6', 6500000), W('w3', 'GoPay', 'ewallet', '#06B6D4', 120000), W('w11', 'SeaBank', 'bank', '#F97316', 2500000), W('w12', 'DANA', 'ewallet', '#3B82F6', 350000),
+      W('w1', 'Tunai', 'cash', '#22C55E', 450000), W('w2', 'BCA', 'bank', '#3B82F6', 6500000), W('w3', 'GoPay', 'ewallet', '#06B6D4', 120000), W('w11', 'SeaBank', 'bank', '#F97316', 9441333, { rateBp:375, rateTax:true, rateFrom:addDays(today(), -5) }), W('w12', 'DANA', 'ewallet', '#3B82F6', 350000),
       W('w4', 'Dana Darurat', 'saving', '#14B8A6', 15000000), W('w10', 'Liburan Jepang', 'saving', '#EC4899', 4200000),
       W('w5', 'BCA Card', 'credit', '#6366F1', -850000, { limit:10000000 }), W('w6', 'SPayLater', 'paylater', '#F97316', 0, { limit:3000000 }),
       W('w7', 'RDPU', 'invest', '#3B82F6', 10000000, { sub:'Reksadana' }), W('w8', 'Saham BBCA', 'invest', '#22C55E', 8000000, { sub:'Saham' }), W('w9', 'Obligasi FR', 'invest', '#A855F7', 5000000, { sub:'Obligasi' })
@@ -2671,8 +2731,36 @@ const Mock = (() => {
       }
     });
   }
+  // salinan logika bunga harian di server (Code.gs: interestPlan_)
+  function runInterest() {
+    const last = addDays(today(), -1);
+    db.wallets.forEach(w => {
+      if (!(w.rateBp > 0) || w.archived || !w.rateFrom || w.rateFrom >= last || !INT_TYPES.includes(w.type)) return;
+      let start = addDays(w.rateFrom, 1), base = w.initial, before = 0, acc = 0;
+      const deltas = {};
+      db.transactions.forEach(t => {
+        let v = 0;
+        if (t.type === 'income' && t.walletId === w.id) v = t.amount;
+        else if (t.type === 'expense' && t.walletId === w.id) v = -t.amount;
+        else if (t.type === 'transfer') v = (t.walletId === w.id ? -t.amount - (t.fee || 0) : 0) + (t.toWalletId === w.id ? t.amount : 0);
+        if (!v) return;
+        if (t.categoryId === '__int' && t.walletId === w.id) before += v;
+        else if (t.date < start) base += v; else deltas[t.date] = (deltas[t.date] || 0) + v;
+      });
+      for (let d = start, n = 0; d <= last && n < 400; d = addDays(d, 1), n++) {
+        base += deltas[d] || 0;
+        const amt = dailyInterest(base + before + acc, w.rateBp, w.rateTax); if (!amt) continue;
+        acc += amt;
+        const post = addDays(d, 1), id = 'int-' + w.id + '-' + post.slice(0, 7);
+        const cur = db.transactions.find(t => t.id === id);
+        if (cur) { cur.amount += amt; cur.date = post; }
+        else db.transactions.push({ id, date:post, type:'income', walletId:w.id, toWalletId:'', categoryId:'__int', amount:amt, fee:0, note:'Bunga harian', refId:'', createdAt:new Date().toISOString() });
+      }
+      w.rateFrom = last;
+    });
+  }
   const F = {
-    boot:() => { runRecurring(); return { hasPin:!!db.pin, data:db.pin ? null : all() }; },
+    boot:() => { runRecurring(); runInterest(); return { hasPin:!!db.pin, data:db.pin ? null : all() }; },
     unlock:p => { if (p !== db.pin) throw new Error('PIN salah'); return Object.assign(all(), { token:'mock' }); },
     getAll:all,
     setPin:(o, n) => { if (db.pin && o !== db.pin) throw new Error('PIN lama salah'); db.pin = n || ''; return n ? { hasPin:true, token:'mock' } : { hasPin:false }; },
