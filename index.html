@@ -43,6 +43,8 @@ html,body{background:var(--bg);color:var(--text);height:100%;overflow:hidden}
 /* Apps Script menampilkan halaman di dalam iframe; di iOS iframe melebar mengikuti isi.
    Semua isi ditaruh di satu kontainer scroll yang fixed agar lebar tidak pernah melebihi layar. */
 body{position:fixed;inset:0;width:100%;font:14.5px/1.35 Outfit,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%}
+html.pwa,html.pwa body{height:var(--appH)}
+html.pwa body{bottom:auto}
 #scroll{position:absolute;inset:0;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
 body.locked #scroll{overflow-y:hidden}
 /* --gx: kelebihan lebar iframe dibanding layar HP (banner Google). Dipakai sebagai margin aman kiri-kanan
@@ -59,10 +61,10 @@ b,.num{font-variant-numeric:tabular-nums}
 .i .f{fill:currentColor;opacity:.22;stroke:none}
 .i .s{fill:currentColor;stroke:none}
 .i.b{stroke-width:2.2}
-.tile{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;flex-shrink:0}
+.tile{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;flex-shrink:0}
 .tile .f{opacity:.38}
 .tile.sm{width:36px;height:36px;border-radius:11px}
-.tile.lg{width:58px;height:58px;border-radius:18px}
+.tile.lg{width:50px;height:50px;border-radius:16px}
 .tile.ic{border-radius:50%}
 .logo{width:46px;height:46px;flex-shrink:0;display:block;object-fit:contain}
 .logo.sm{width:38px;height:38px}.logo.lg{width:60px;height:60px}.logo.xs{width:32px;height:32px}
@@ -90,7 +92,7 @@ b,.num{font-variant-numeric:tabular-nums}
 
 /* header */
 #hdr{position:sticky;top:0;z-index:20;background:var(--bg);padding-top:var(--sat)}
-.hd{max-width:calc(520px + 2 * var(--gx));margin:0 auto;display:flex;align-items:center;gap:10px;padding:10px var(--px);min-height:60px}
+.hd{max-width:calc(520px + 2 * var(--gx));margin:0 auto;display:flex;align-items:center;gap:10px;padding:6px var(--px);min-height:52px}
 .hd h1{flex:1;text-align:center;font-size:19px;font-weight:600;letter-spacing:-.01em}
 .hside{width:40px;display:flex;justify-content:center;flex-shrink:0}
 .hbtn{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--text);background:var(--card)}
@@ -98,8 +100,8 @@ b,.num{font-variant-numeric:tabular-nums}
 .hbtn.spinning .i{animation:rot .8s linear infinite}
 .greet{flex:1;min-width:0}
 .greet small{display:block;font-size:12.5px;color:var(--sub)}
-.greet b{display:block;font-size:20px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(140deg,#0B78C2,#0E9F7E);color:#fff;display:grid;place-items:center;font-weight:600;font-size:15px;flex-shrink:0}
+.greet b{display:block;font-size:18px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(140deg,#0B78C2,#0E9F7E);color:#fff;display:grid;place-items:center;font-weight:600;font-size:15px;flex-shrink:0}
 
 #app{max-width:calc(520px + 2 * var(--gx));margin:0 auto;padding:4px var(--px) calc(104px + var(--sab))}
 .fade{animation:fade .22s ease}
@@ -108,10 +110,10 @@ b,.num{font-variant-numeric:tabular-nums}
 /* chip periode & segmen */
 .periods{display:flex;gap:2px;margin:0 0 14px}
 .menu::-webkit-scrollbar,.chips::-webkit-scrollbar{display:none}
-.periods button{flex:1 1 0;min-width:0;padding:9px 0;border-radius:99px;font-size:14px;font-weight:500;color:var(--sub);text-align:center}
+.periods button{flex:1 1 0;min-width:0;padding:7px 0;border-radius:99px;font-size:13.5px;font-weight:500;color:var(--sub);text-align:center}
 .periods button.on{background:var(--text);color:var(--bg)}
 .seg{display:flex;background:var(--card);border-radius:99px;padding:4px;gap:2px}
-.seg button{flex:1;text-align:center;font-size:13.5px;font-weight:500;padding:8px 6px;border-radius:99px;color:var(--sub);white-space:nowrap}
+.seg button{flex:1;text-align:center;font-size:13.5px;font-weight:500;padding:7px 6px;border-radius:99px;color:var(--sub);white-space:nowrap}
 .seg button.on{background:var(--card3);color:var(--text)}
 .seg.inline{display:inline-flex;margin:0 auto}
 .center{display:flex;justify-content:center}
@@ -124,41 +126,41 @@ b,.num{font-variant-numeric:tabular-nums}
 .pnav button{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:var(--text)}
 
 /* hero */
-.hero{position:relative;overflow:hidden;border-radius:26px;padding:20px 16px 16px;background:var(--hero);color:#fff;text-align:center}
+.hero{position:relative;overflow:hidden;border-radius:24px;padding:16px 12px 12px;background:var(--hero);color:#fff;text-align:center}
 .hero:after{content:"";position:absolute;inset:0;border-radius:inherit;border:1px solid rgba(255,255,255,.08);pointer-events:none}
 .hero-cap{display:flex;align-items:center;justify-content:center;gap:6px;font-size:14px;opacity:.85}
 .hero-cap .i{opacity:.85}
-.hero-amt{font-size:34px;font-weight:600;letter-spacing:-.02em;margin:6px 0 2px;font-variant-numeric:tabular-nums}
+.hero-amt{font-size:30px;font-weight:600;letter-spacing:-.02em;margin:6px 0 2px;font-variant-numeric:tabular-nums}
 .hero-sub{font-size:12.5px;opacity:.65}
 .hchip{display:inline-flex;align-items:center;gap:5px;margin-top:10px;font-size:12.5px;font-weight:500;padding:5px 11px;border-radius:99px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.16)}
-.glass{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;text-align:left}
-.gl{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);border-radius:18px;padding:11px 12px;min-width:0;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.glass{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;text-align:left}
+.gl{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:9px 11px;min-width:0;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .gl-h{display:flex;align-items:center;gap:7px;font-size:12.5px;opacity:.85}
-.gl-h i{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.16);display:grid;place-items:center}
-.gl b{display:block;font-size:15.5px;font-weight:600;margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gl-h i{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.16);display:grid;place-items:center}
+.gl b{display:block;font-size:14.5px;font-weight:600;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gl.mini small{display:block;font-size:11.5px;opacity:.75}
 .gl.mini b{margin-top:3px;font-size:14.5px}
 
 /* section & list */
-.sec{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:22px 2px 10px}
-.sec h3{font-size:18px;font-weight:600}
+.sec{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:16px 2px 8px}
+.sec h3{font-size:16.5px;font-weight:600}
 .sec .lk{font-size:13.5px;color:var(--sub);font-weight:500;display:flex;align-items:center;gap:2px}
 .sec .sum{font-size:13px;color:var(--sub);font-weight:500}
-.menu{display:flex;gap:14px;overflow-x:auto;margin:0 calc(-1 * var(--px));padding:0 var(--px) 2px;scroll-snap-type:x mandatory;scroll-padding:0 var(--px)}
-.menu button{scroll-snap-align:start;display:flex;flex-direction:column;align-items:center;gap:7px;font-size:12.5px;line-height:1.2;color:var(--sub);flex-shrink:0;width:62px;text-align:center}
+.menu{display:flex;gap:10px;overflow-x:auto;margin:0 calc(-1 * var(--px));padding:0 var(--px) 2px;scroll-snap-type:x mandatory;scroll-padding:0 var(--px)}
+.menu button{scroll-snap-align:start;display:flex;flex-direction:column;align-items:center;gap:7px;font-size:12.5px;line-height:1.2;color:var(--sub);flex-shrink:0;width:58px;text-align:center;font-size:12px}
 .menu button:active .tile{transform:scale(.93)}
 .stack{display:flex;flex-direction:column;gap:8px}
-.tx,.wrow{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;background:var(--card);border-radius:20px;box-shadow:var(--shadow);text-align:left}
+.tx,.wrow{display:flex;align-items:center;gap:11px;width:100%;padding:10px 12px;background:var(--card);border-radius:18px;box-shadow:var(--shadow);text-align:left}
 .tx:active,.wrow:active{background:var(--card2)}
 .tx-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;text-align:left}
 .tx-t{display:flex;align-items:baseline;gap:7px;min-width:0}
-.tx-t b{font-size:15.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx-t b{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tx-t time{font-size:12px;color:var(--mute);flex-shrink:0}
 .tx-s{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--sub);white-space:nowrap;overflow:hidden;min-width:0}
 .tx-s span{overflow:hidden;text-overflow:ellipsis}
 .tx-a{font-size:14.5px;font-weight:500;white-space:nowrap;font-variant-numeric:tabular-nums}
 .tx-a.exp{color:var(--exp)} .tx-a.inc{color:var(--inc)} .tx-a.trf{color:var(--sub)}
-.dh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:18px 2px 8px;font-size:13.5px;color:var(--sub)}
+.dh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:14px 2px 6px;font-size:13px;color:var(--sub)}
 .dh:first-child{margin-top:4px}
 .dh b{font-weight:500;font-size:13px;white-space:nowrap}
 .cap2{font-size:11.5px;color:var(--sub);letter-spacing:.04em}
@@ -260,41 +262,41 @@ b,.num{font-variant-numeric:tabular-nums}
 .gacts button.pri{background:var(--text);color:var(--bg)}
 
 /* navbar */
-#nav{position:fixed;left:0;right:0;bottom:calc(10px + var(--sab));z-index:30;display:flex;justify-content:center;pointer-events:none;padding:0 var(--px)}
+#nav{position:absolute;left:0;right:0;bottom:calc(10px + var(--sab));z-index:30;display:flex;justify-content:center;pointer-events:none;padding:0 var(--px)}
 .nav-in{display:flex;gap:10px;width:100%;max-width:488px}
-.nav-pill{pointer-events:auto;flex:1;height:64px;border-radius:32px;background:var(--nav);backdrop-filter:saturate(170%) blur(22px);-webkit-backdrop-filter:saturate(170%) blur(22px);
+.nav-pill{pointer-events:auto;flex:1;height:58px;border-radius:29px;background:var(--nav);backdrop-filter:saturate(170%) blur(22px);-webkit-backdrop-filter:saturate(170%) blur(22px);
   border:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 7px;box-shadow:0 10px 30px -10px rgba(0,0,0,.35)}
-.nav-pill button{flex:1;max-width:76px;height:50px;border-radius:25px;display:grid;place-items:center;color:var(--sub);transition:background .2s,color .2s}
+.nav-pill button{flex:1;max-width:76px;height:46px;border-radius:23px;display:grid;place-items:center;color:var(--sub);transition:background .2s,color .2s}
 .nav-pill button.on{background:var(--card3);color:var(--text)}
 .nav-pill button.on .f{opacity:.9}
-.nav-fab{pointer-events:auto;width:64px;height:64px;border-radius:50%;background:var(--text);color:var(--bg);display:grid;place-items:center;flex-shrink:0;
+.nav-fab{pointer-events:auto;width:58px;height:58px;border-radius:50%;background:var(--text);color:var(--bg);display:grid;place-items:center;flex-shrink:0;
   box-shadow:0 10px 26px -8px rgba(0,0,0,.45);transition:transform .15s}
 .nav-fab:active{transform:scale(.92)}
 
 /* sheet */
-.layer{position:fixed;inset:0;z-index:40}
+.layer{position:absolute;inset:0;z-index:40}
 .backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45);opacity:0;transition:opacity .3s}
-.sheet{position:absolute;left:0;right:0;bottom:0;margin:0 auto;max-width:calc(520px + 2 * var(--gx));max-height:calc(100dvh - var(--sat) - 24px);
+.sheet{position:absolute;left:0;right:0;bottom:0;margin:0 auto;max-width:calc(520px + 2 * var(--gx));max-height:calc(100% - var(--sat) - 10px);
   background:var(--bg);border-radius:26px 26px 0 0;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .34s cubic-bezier(.32,.72,0,1)}
 .layer.show .backdrop{opacity:1}
 .layer.show .sheet{transform:none}
 .sh-top{flex-shrink:0;touch-action:none}
 .grab{width:38px;height:5px;border-radius:9px;background:var(--mute);opacity:.6;margin:8px auto 0}
-.sh-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:6px calc(12px + var(--gx)) 10px}
+.sh-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:4px calc(12px + var(--gx)) 6px}
 .sh-title{font-weight:600;font-size:16.5px;text-align:center}
 .sh-btn{padding:8px 4px;color:var(--sub);font-size:15px;font-weight:500;justify-self:start}
 .sh-btn.strong{justify-self:end;background:var(--text);color:var(--bg);padding:8px 16px;border-radius:99px;font-weight:600;font-size:14px}
 .sh-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px var(--px) calc(24px + var(--sab));overscroll-behavior:contain}
 .sh-body.has-foot{padding-bottom:16px}
 .sh-foot{flex-shrink:0;padding:10px var(--px) calc(12px + var(--sab));background:var(--bg);border-top:1px solid var(--line)}
-.btn.big{padding:16px;font-size:16.5px;border-radius:18px}
+.btn.big{padding:14px;font-size:16px;border-radius:16px}
 .kpad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
 .kpad.hide{display:none}
-.kpad button{height:50px;border-radius:14px;background:var(--card);font-size:23px;font-weight:500;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+.kpad button{height:46px;border-radius:14px;background:var(--card);font-size:23px;font-weight:500;display:grid;place-items:center;font-variant-numeric:tabular-nums}
 .kpad button:active{background:var(--card3)}
 .amt input[readonly]{cursor:default;-webkit-user-select:none;user-select:none}
 @media (max-height:700px){.kpad button{height:42px;font-size:21px}}
-.flabel{font-size:12.5px;font-weight:500;color:var(--sub);margin:18px 6px 8px}
+.flabel{font-size:12.5px;font-weight:500;color:var(--sub);margin:14px 6px 7px}
 .field{display:flex;align-items:center;gap:10px;padding:0 14px;min-height:52px;position:relative}
 .field label{flex-shrink:0;font-weight:500}
 .field input,.field select{flex:1;min-width:0;border:0;background:none;outline:0;text-align:right;padding:13px 0;-webkit-appearance:none;appearance:none;color:var(--sub)}
@@ -303,13 +305,27 @@ b,.num{font-variant-numeric:tabular-nums}
 .field input[type=date]{display:flex;justify-content:flex-end}
 .field input::-webkit-date-and-time-value{text-align:right}
 .field.full input{text-align:left;color:var(--text)}
-.amt-box{background:var(--card);border-radius:22px;padding:14px 16px 12px;text-align:center;margin-top:12px}
+.amt-box{background:var(--card);border-radius:20px;padding:12px 14px 10px;text-align:center;margin-top:10px}
 .amt-box small{font-size:12.5px;color:var(--sub)}
 .amt{display:flex;align-items:center;justify-content:center;gap:4px;margin-top:2px}
 .amt span{font-size:22px;font-weight:500;color:var(--sub)}
 .amt input{width:1ch;min-width:1ch;max-width:calc(100% - 40px);padding-right:2px;border:0;background:none;outline:0;font-size:38px;font-weight:600;text-align:center;caret-color:var(--accent);font-variant-numeric:tabular-nums}
 .amt-box.exp .amt input{color:var(--exp)} .amt-box.inc .amt input{color:var(--inc)}
 .cgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.cchips{display:flex;gap:6px;overflow-x:auto;margin:10px calc(-1 * var(--px)) 0;padding:0 var(--px) 2px;scrollbar-width:none}
+.cchips::-webkit-scrollbar{display:none}
+.cchips.wrap{flex-wrap:wrap;overflow:visible}
+.cch{flex-shrink:0;display:flex;align-items:center;gap:7px;padding:5px 12px 5px 5px;border-radius:99px;background:var(--card);border:1.5px solid transparent;font-size:13px;color:var(--sub);white-space:nowrap}
+.cch.on{border-color:var(--text);color:var(--text)}
+.cch.more{padding:7px 12px;color:var(--accent)}
+.tile.xs .art{width:20px;height:20px}
+.metas{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.meta{position:relative;display:flex;align-items:center;gap:6px;padding:8px 11px;border-radius:12px;background:var(--card);font-size:13px;color:var(--text);max-width:100%;min-width:0}
+.meta span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta>.i:last-of-type{color:var(--mute)}
+.meta select,.meta input[type=date]{position:absolute;inset:0;opacity:0;width:100%;height:100%;font-size:16px}
+.meta.fee input{width:76px;border:0;background:none;outline:0;color:var(--text);font-size:16px;padding:0}
+.meta.fee span{color:var(--sub)}
 .wpick{display:flex;gap:8px;overflow-x:auto;margin:0 calc(-1 * var(--px));padding:2px var(--px);scrollbar-width:none}
 .wpick::-webkit-scrollbar{display:none}
 .wp{flex:0 0 auto;display:flex;align-items:center;gap:9px;padding:8px 12px 8px 8px;border-radius:16px;background:var(--card);border:1.5px solid transparent;text-align:left;max-width:200px}
@@ -321,9 +337,10 @@ b,.num{font-variant-numeric:tabular-nums}
 .mrow span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mrow b{font-weight:500;white-space:nowrap;font-size:13px}
 .mrow em{font-style:normal;font-weight:600}
-.smart{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:18px;padding:0 14px;margin-top:12px;color:var(--accent)}
-.smart input{flex:1;min-width:0;border:0;background:none;outline:0;padding:15px 0;color:var(--text)}
-.shint{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--sub);margin:8px 6px 0;min-height:30px}
+.smart{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:16px;padding:0 14px;margin-top:8px;color:var(--accent)}
+.smart input{flex:1;min-width:0;border:0;background:none;outline:0;padding:12px 0;color:var(--text)}
+.shint{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--sub);margin:6px 6px 0}
+.shint:empty{display:none}
 .shint b{color:var(--text);font-weight:600}
 .flabel.top2{display:flex}
 .lk2{font-size:12.5px;color:var(--accent);font-weight:500}
@@ -359,7 +376,7 @@ b,.num{font-variant-numeric:tabular-nums}
 .wacts button{display:flex;flex-direction:column;align-items:center;gap:5px;padding:11px 0;background:var(--card);border-radius:18px;font-size:12.5px;font-weight:500}
 
 /* alert, action sheet, toast */
-.alert-layer{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;padding:30px}
+.alert-layer{position:absolute;inset:0;z-index:80;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;padding:30px}
 .alert-layer.show{opacity:1}
 .alert{width:290px;border-radius:22px;background:var(--card);overflow:hidden;text-align:center;transform:scale(1.06);transition:transform .2s}
 .alert-layer.show .alert{transform:none}
@@ -380,11 +397,12 @@ b,.num{font-variant-numeric:tabular-nums}
 .as-g button.cancel{font-weight:600}
 #toast{position:fixed;left:50%;top:calc(var(--sat) + 12px);transform:translate(-50%,-160%);z-index:100;background:var(--text);color:var(--bg);font-size:14px;font-weight:500;
   padding:10px 16px;border-radius:99px;display:flex;align-items:center;gap:8px;transition:transform .35s cubic-bezier(.32,.72,0,1);max-width:90vw;box-shadow:0 8px 24px rgba(0,0,0,.25)}
-#toast.show{transform:translate(-50%,0)}
+#toast{opacity:0;visibility:hidden;transition:transform .35s cubic-bezier(.32,.72,0,1),opacity .2s,visibility .35s}
+#toast.show{transform:translate(-50%,0);opacity:1;visibility:visible}
 #toast.err{background:var(--exp);color:#fff}
 
 /* kunci & splash */
-#lock,#splash{position:fixed;inset:0;z-index:90;background:var(--bg);display:flex;align-items:center;justify-content:center;transition:opacity .25s}
+#lock,#splash{position:absolute;inset:0;z-index:90;background:var(--bg);display:flex;align-items:center;justify-content:center;transition:opacity .25s}
 #lock.out,#splash.out{opacity:0;pointer-events:none}
 .lk-in{display:flex;flex-direction:column;align-items:center;width:100%;max-width:300px}
 .logo{width:64px;height:64px;border-radius:22px;background:var(--hero);color:#fff;display:grid;place-items:center}
@@ -1395,8 +1413,10 @@ function openSheet({ title, left = 'Batal', right, onRight, body = '', onClose }
   };
   new MutationObserver(syncAmt).observe(el.body, { childList:true, subtree:true });
   if (pad) {
-    pad.addEventListener('click', e => {
+    // pointerdown: langsung saat jari menyentuh, sebelum tata letak sempat bergeser (keyboard menutup, keypad muncul)
+    pad.addEventListener('pointerdown', e => {
       const b = e.target.closest('[data-k]'), inp = el.body.querySelector('.amt input'); if (!b || !inp) return;
+      e.preventDefault();
       let s = String(digits(inp.value) || '');
       if (b.dataset.k === 'del') s = s.slice(0, -1); else if (s.length < 13) s = (s + b.dataset.k).replace(/^0+/, '');
       inp.value = s;
@@ -1414,10 +1434,22 @@ function openSheet({ title, left = 'Batal', right, onRight, body = '', onClose }
 function closeSheet(el) {
   if (!el || el._closing) return;
   el._closing = true; el._refresh = null;
+  const a = document.activeElement; if (a && el.contains(a) && a.blur) a.blur();
   el.classList.remove('show');
   if (el._onClose) el._onClose();
-  setTimeout(() => { el.remove(); if (!$('#layers').children.length) document.body.classList.remove('locked'); }, 320);
+  setTimeout(() => { el.remove(); if (!$('#layers').children.length) document.body.classList.remove('locked'); resetViewport(); }, 320);
 }
+// iOS: setelah keyboard menutup, jendela bisa tertinggal ter-scroll. Tampilan terlihat normal tetapi titik sentuh
+// meleset (tombol keypad "bergeser" satu baris) dan aplikasi terasa macet. Kembalikan scroll jendela ke 0.
+function resetViewport() {
+  if (window.scrollX || window.scrollY) window.scrollTo(0, 0);
+  if (document.documentElement.scrollTop) document.documentElement.scrollTop = 0;
+  if (document.body.scrollTop) document.body.scrollTop = 0;
+}
+const isTyping = () => { const a = document.activeElement; return !!a && a.matches('input:not([readonly]), select, textarea'); };
+document.addEventListener('focusout', () => setTimeout(() => { if (!isTyping()) resetViewport(); }, 80));
+if (window.visualViewport) window.visualViewport.addEventListener('resize', () => { if (!isTyping()) setTimeout(resetViewport, 50); });
+window.addEventListener('scroll', () => { if (!isTyping()) resetViewport(); });
 function confirmBox(title, msg, ok = 'Hapus', danger = true) {
   return new Promise(res => {
     const el = document.createElement('div');
@@ -1578,12 +1610,11 @@ function openTxForm(t, preset = {}) {
   function draw() {
     el.body.innerHTML = `
     ${sys ? `<div class="pill" style="margin:4px 0 0;padding-right:12px">${ic(sys.icon, 15)}${sys.name}</div>` : preset.recur ? '' : `<div id="f-type"></div>`}
-    <div class="smart">${ic('sparkles', 19)}<input id="f-note" placeholder="${f.type === 'transfer' ? 'Catatan (opsional)' : 'Ketik: kopi 25rb, gojek ke kantor, gaji…'}" value="${esc(f.note)}" maxlength="200" autocomplete="off" enterkeyhint="done"></div>
+    <div class="amt-box" id="f-box"><div class="amt"><span>Rp</span><input id="f-amt" inputmode="numeric" placeholder="0" value="${fmtNum(f.amount)}" autocomplete="off"></div></div>
+    <div class="smart">${ic('sparkles', 18)}<input id="f-note" placeholder="${f.type === 'transfer' ? 'Catatan (opsional)' : 'Catatan: kopi 25rb, gojek, gaji…'}" value="${esc(f.note)}" maxlength="200" autocomplete="off" enterkeyhint="done"></div>
     <div class="shint" id="f-hint"></div>
-    <div class="amt-box" id="f-box"><small>Nominal</small><div class="amt"><span>Rp</span><input id="f-amt" inputmode="numeric" placeholder="0" value="${fmtNum(f.amount)}" autocomplete="off"></div></div>
     <div id="f-cats"></div>
-    <div class="flabel">Detail</div>
-    <div class="group" id="f-detail"></div>
+    <div class="metas" id="f-detail"></div>
     ${edit ? `<div class="btns">${sys ? '<span></span>' : `<button class="btn" data-f="dup">${ic('copy', 17)}Duplikat</button>`}<button class="btn danger" data-f="del">${ic('trash', 17)}Hapus</button></div>` : ''}`;
     const note = $b('#f-note'), amt = $b('#f-amt');
     note.oninput = () => { f.note = note.value; think(); };
@@ -1597,29 +1628,31 @@ function openTxForm(t, preset = {}) {
   function drawCats() {
     const box = $b('#f-cats');
     if (f.type === 'transfer' || sys) { box.innerHTML = ''; return; }
-    let list = st.all ? cats(f.type) : topCats(f.type, 7);
+    let list = st.all ? cats(f.type) : topCats(f.type, 10);
     const sel = D.categories.find(c => c.id === f.categoryId);
-    if (sel && !list.includes(sel)) list = [sel].concat(list.slice(0, 6));
-    box.innerHTML = `<div class="flabel top2"><span>Kategori</span><button class="lk2" data-f="all">${st.all ? 'Lebih sedikit' : 'Semua (' + cats(f.type).length + ')'}</button></div>
-      <div class="cgrid">${list.map(c => `<button class="cg ${f.categoryId === c.id ? 'on' : ''}" data-f="cat" data-v="${c.id}">${itile(c.icon, c.color, 'sm')}<span>${esc(c.name)}</span></button>`).join('')}
-      ${st.all ? `<button class="cg add" data-f="newcat"><span class="tile sm">${ic('plus', 19)}</span><span>Baru</span></button>` : `<button class="cg add" data-f="all"><span class="tile sm">${ic('grid', 19)}</span><span>Lainnya</span></button>`}</div>`;
+    if (sel) list = [sel].concat(list.filter(c => c !== sel));
+    box.innerHTML = `<div class="cchips ${st.all ? 'wrap' : ''}">${list.map(c => `<button class="cch ${f.categoryId === c.id ? 'on' : ''}" data-f="cat" data-v="${c.id}">${itile(c.icon, c.color, 'xs')}<span>${esc(c.name)}</span></button>`).join('')}
+      ${st.all ? `<button class="cch more" data-f="newcat">${ic('plus', 16, 'b')}<span>Baru</span></button><button class="cch more" data-f="all"><span>Ringkas</span></button>`
+        : `<button class="cch more" data-f="all">${ic('grid', 16)}<span>Semua</span></button>`}</div>`;
+    if (!st.all) box.firstElementChild.scrollLeft = 0;
   }
   function drawDetail() {
     const T = f.type;
-    $b('#f-detail').innerHTML = `${selField('f-w', T === 'transfer' ? 'Dari' : 'Akun', walletOptions(f.walletId))}
-      ${T === 'transfer' ? selField('f-to', 'Ke', `<option value="">Pilih akun</option>${walletOptions(f.toWalletId, f.walletId)}`) +
-        `<div class="field"><label>Biaya admin</label><input id="f-fee" inputmode="numeric" placeholder="Rp0" value="${fmtNum(f.fee)}"></div>` : ''}
-      <div class="field"><label>Tanggal</label><input id="f-date" type="date" value="${f.date}"></div>`;
-    $b('#f-w').onchange = e => { f.walletId = e.target.value; if (f.toWalletId === f.walletId) f.toWalletId = ''; if (T === 'transfer') drawDetail(); };
-    const to = $b('#f-to'); if (to) to.onchange = e => f.toWalletId = e.target.value;
+    const w = wal(f.walletId), to = wal(f.toWalletId);
+    $b('#f-detail').innerHTML = `<label class="meta">${w ? wicon(w, 'mn') : ic('wallet', 16)}<span>${esc(w ? w.name : 'Pilih akun')}</span>${ic('chevR', 13)}<select id="f-w">${walletOptions(f.walletId)}</select></label>
+      ${T === 'transfer' ? `<label class="meta">${ic('arrowOut', 14)}<span>${esc(to ? to.name : 'Ke akun…')}</span>${ic('chevR', 13)}<select id="f-to"><option value="">Pilih akun</option>${walletOptions(f.toWalletId, f.walletId)}</select></label>
+        <label class="meta fee"><span>Biaya</span><input id="f-fee" inputmode="numeric" placeholder="0" value="${fmtNum(f.fee)}"></label>` : ''}
+      <label class="meta">${ic('calendar', 15)}<span>${dateLong(f.date)}</span><input id="f-date" type="date" value="${f.date}"></label>`;
+    $b('#f-w').onchange = e => { f.walletId = e.target.value; if (f.toWalletId === f.walletId) f.toWalletId = ''; drawDetail(); };
+    const toSel = $b('#f-to'); if (toSel) toSel.onchange = e => { f.toWalletId = e.target.value; drawDetail(); };
     const fee = $b('#f-fee'); if (fee) fee.oninput = () => { f.fee = digits(fee.value); fee.value = fmtNum(f.fee); };
-    $b('#f-date').onchange = e => f.date = e.target.value || today();
+    $b('#f-date').onchange = e => { f.date = e.target.value || today(); drawDetail(); };
   }
   function drawHint() {
     const h = $b('#f-hint'), c = D.categories.find(x => x.id === f.categoryId);
     if (f.type === 'transfer' || sys) { h.innerHTML = ''; return; }
     if (st.why && c) h.innerHTML = `${itile(c.icon, c.color, 'xs')}<span><b>${esc(c.name)}</b> · otomatis dari ${st.why === 'riwayat' ? 'kebiasaanmu' : 'kata kunci'}</span>`;
-    else if (!c) h.innerHTML = `<span>${f.note.trim() ? 'Belum kenal kata ini — pilih kategori sekali, berikutnya otomatis' : 'Kategori & nominal terisi otomatis dari catatan'}</span>`;
+    else if (!c && f.note.trim()) h.innerHTML = '<span>Kata baru — pilih kategori sekali, berikutnya otomatis</span>';
     else h.innerHTML = '';
   }
   // Baca catatan: isi nominal & tebak kategori/jenis tanpa mengganggu input yang sedang diketik.
@@ -1649,7 +1682,7 @@ function openTxForm(t, preset = {}) {
       $b('#f-note').placeholder = f.type === 'transfer' ? 'Catatan (opsional)' : 'Ketik: kopi 25rb, gojek ke kantor, gaji…';
       drawType(); drawDetail(); think();
     }
-    else if (k === 'cat') { f.categoryId = b.dataset.v; st.catManual = true; st.why = ''; el.body.querySelectorAll('.cg[data-f=cat]').forEach(x => x.classList.toggle('on', x === b)); drawHint(); }
+    else if (k === 'cat') { f.categoryId = b.dataset.v; st.catManual = true; st.why = ''; el.body.querySelectorAll('[data-f=cat]').forEach(x => x.classList.toggle('on', x === b)); drawHint(); }
     else if (k === 'all') { st.all = !st.all; drawCats(); }
     else if (k === 'newcat') openCatForm(null, f.type, c => { f.categoryId = c.id; st.catManual = true; st.why = ''; drawCats(); drawHint(); });
     else if (k === 'dup') {
@@ -2380,8 +2413,17 @@ function fitScreen() {
   if (extra > 1 && extra < 120) document.documentElement.style.setProperty('--gx', Math.ceil(extra) + 'px');
   else document.documentElement.style.removeProperty('--gx');
 }
+// Aplikasi di Layar Utama iOS kadang melaporkan tinggi layar lebih pendek (navbar melayang, ada ruang kosong di bawah).
+function fitPWA() {
+  if (!(navigator.standalone || window.matchMedia('(display-mode: standalone)').matches)) return;
+  const land = Math.abs(window.orientation || 0) === 90;
+  const h = land ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height);
+  document.documentElement.style.setProperty('--appH', Math.max(h, window.innerHeight) + 'px');
+  document.documentElement.classList.add('pwa');
+}
+fitPWA();
 fitScreen();
-window.addEventListener('resize', fitScreen);
+window.addEventListener('resize', () => { fitScreen(); fitPWA(); });
 window.addEventListener('orientationchange', () => setTimeout(fitScreen, 300));
 function hideSplash() { const s = $('#splash'); if (!s) return; s.classList.add('out'); setTimeout(() => s.remove(), 300); }
 async function start() {
