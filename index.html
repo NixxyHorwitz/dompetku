@@ -312,6 +312,25 @@ b,.num{font-variant-numeric:tabular-nums}
 .amt input{width:1ch;min-width:1ch;max-width:calc(100% - 40px);padding-right:2px;border:0;background:none;outline:0;font-size:38px;font-weight:600;text-align:center;caret-color:var(--accent);font-variant-numeric:tabular-nums}
 .amt-box.exp .amt input{color:var(--exp)} .amt-box.inc .amt input{color:var(--inc)}
 .cgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.deck{position:relative;touch-action:pan-y}
+.peek{position:absolute;left:0;right:0;height:56px;border-radius:20px 20px 0 0;display:flex;justify-content:space-between;align-items:flex-start;padding:10px 18px;color:#fff;font-size:12.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;box-shadow:0 -2px 10px rgba(0,0,0,.18)}
+.peek span:last-child{font-weight:500;letter-spacing:0;text-transform:none;opacity:.9}
+.lcard{position:relative;height:186px;border-radius:22px;color:#fff;padding:16px 18px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;cursor:pointer;
+  box-shadow:0 16px 28px -16px rgba(0,0,0,.6),0 -2px 10px rgba(0,0,0,.15)}
+.lcard:before{content:"";position:absolute;width:190px;height:190px;border-radius:50%;background:rgba(255,255,255,.1);left:-60px;top:-80px}
+.lcard:after{content:"";position:absolute;width:170px;height:170px;border-radius:50%;background:rgba(255,255,255,.08);right:-40px;bottom:-70px}
+.lc-top{display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.lc-ic{width:44px;height:44px;border-radius:13px;background:#fff;display:grid;place-items:center;flex-shrink:0;overflow:hidden}
+.lc-top b{flex:1;font-size:16px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lc-type{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;opacity:.92}
+.lcard>div:last-child{position:relative;z-index:1}
+.lcard small{font-size:11px;font-weight:600;letter-spacing:.07em;opacity:.8}
+.lc-amt{font-size:28px;font-weight:700;margin-top:1px;font-variant-numeric:tabular-nums}
+.dots{display:flex;justify-content:center;gap:5px;margin-top:10px}
+.dots i{width:6px;height:6px;border-radius:9px;background:var(--mute);opacity:.5;transition:all .2s}
+.dots i.on{width:18px;background:var(--accent);opacity:1}
+.swap-in{animation:swapin .3s cubic-bezier(.32,.72,0,1)}
+@keyframes swapin{from{transform:translateY(-16px) scale(.97);opacity:.5}to{transform:none;opacity:1}}
 .cchips{display:flex;gap:6px;overflow-x:auto;margin:10px calc(-1 * var(--px)) 0;padding:0 var(--px) 2px;scrollbar-width:none}
 .cchips::-webkit-scrollbar{display:none}
 .cchips.wrap{flex-wrap:wrap;overflow:visible}
@@ -470,6 +489,7 @@ const ICONS = {
   calendar:'<rect class="f" x="3.5" y="5" width="17" height="15.5" rx="3"/><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
   sheet:'<rect class="f" x="4.5" y="3" width="15" height="18" rx="2.5"/><rect x="4.5" y="3" width="15" height="18" rx="2.5"/><path d="M8 9h8M8 13h8M8 17h8M12 9v8"/>',
   alert:'<path class="f" d="M12 3.5 2.5 20h19z"/><path d="M10.7 4.3 2.9 18a1.5 1.5 0 0 0 1.3 2.2h15.6a1.5 1.5 0 0 0 1.3-2.2L13.3 4.3a1.5 1.5 0 0 0-2.6 0z"/><path d="M12 9.5v4.5M12 17v.01"/>',
+  nfc:'<path d="M7 8.5a5 5 0 0 1 0 7M10.5 6a8.5 8.5 0 0 1 0 12M14 3.5a12 12 0 0 1 0 17"/>',
   sparkles:'<path class="f" d="M11 3c.6 4.2 2.8 6.4 7 7-4.2.6-6.4 2.8-7 7-.6-4.2-2.8-6.4-7-7 4.2-.6 6.4-2.8 7-7z"/><path d="M11 3c.6 4.2 2.8 6.4 7 7-4.2.6-6.4 2.8-7 7-.6-4.2-2.8-6.4-7-7 4.2-.6 6.4-2.8 7-7z"/><path d="M19 15c.2 1.6 1 2.3 2.5 2.5-1.5.2-2.3 1-2.5 2.5-.2-1.5-1-2.3-2.5-2.5 1.5-.2 2.3-.9 2.5-2.5z"/>',
   list:'<path d="M9 6h11M9 12h11M9 18h11"/><circle class="s" cx="4.5" cy="6" r="1.3"/><circle class="s" cx="4.5" cy="12" r="1.3"/><circle class="s" cx="4.5" cy="18" r="1.3"/>',
   del:'<path d="M8.5 5H20a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 20 19H8.5L2.5 12z"/><path d="m11.5 9.5 5 5M16.5 9.5l-5 5"/>',
@@ -1055,6 +1075,7 @@ function vWallets() {
     </div>
   </section>
   <div class="btns" style="margin-top:12px"><button class="btn" data-act="move">${ic('swap', 18)}Pindah Saldo</button><button class="btn" data-act="addWallet">${ic('plus', 18, 'b')}Tambah Akun</button></div>
+  ${byGroup('liquid').length ? `<div class="sec"><h3>Kartu Saya</h3><span class="sum">Geser untuk ganti</span></div>${deck(byGroup('liquid'), bal)}` : ''}
   ${act.length ? SECTIONS.map(type => {
     const ws = act.filter(w => (WTYPES[w.type] ? w.type : 'other') === type); if (!ws.length) return '';
     const g = WTYPES[type].g, sum = ws.reduce((s, w) => s + (g === 'credit' ? Math.max(0, -(bal[w.id] || 0)) : bal[w.id] || 0), 0);
@@ -1062,6 +1083,34 @@ function vWallets() {
   }).join('') : `<div class="mt">${empty('wallet', 'Belum ada akun', 'Tambahkan rekening, e-wallet, atau kartu')}</div>`}
   ${arch.length ? `<button class="link-btn" data-act="toggleArch">${S.showArch ? 'Sembunyikan' : 'Tampilkan'} akun diarsipkan (${arch.length})</button>
     ${S.showArch ? `<div class="stack" style="opacity:.6">${arch.map(w => walletRow(w, bal)).join('')}</div>` : ''}` : ''}`;
+}
+// Tumpukan kartu: kartu aktif di depan, dua kartu berikutnya mengintip di atasnya.
+function deck(ws, bal) {
+  const n = ws.length, i = ((S.deckI || 0) % n + n) % n; S.deckI = i;
+  const peeks = Math.min(2, n - 1), step = 34;
+  let h = `<div class="deck" style="padding-top:${peeks * step}px">`;
+  for (let k = peeks; k >= 1; k--) {
+    const w = ws[(i + k) % n];
+    h += `<button class="peek" style="top:${(peeks - k) * step}px;margin:0 ${k * 9}px;background:linear-gradient(120deg,${shade(w.color, -.05)},${shade(w.color, .2)})" data-act="deckTo" data-id="${(i + k) % n}">
+      <span>${esc(w.name)}</span><span>${money(bal[w.id] || 0)}</span></button>`;
+  }
+  const w = ws[i], k = wLogo(w);
+  h += `<div class="lcard" data-act="wallet" data-id="${w.id}" style="background:linear-gradient(140deg,${shade(w.color, -.12)} 0%,${w.color} 50%,${shade(w.color, .3)} 100%)">
+    <div class="lc-top"><span class="lc-ic">${k ? logoImg(k, 'sm') : itile(wt(w).i, w.color, 'sm')}</span><b>${esc(w.name)}</b><span class="lc-type">${ic('nfc', 15)}${esc(wt(w).l)}</span></div>
+    <div><small>SALDO</small><div class="lc-amt">${money(bal[w.id] || 0)}</div></div></div></div>`;
+  if (n > 1) h += `<div class="dots">${ws.map((_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('')}</div>`;
+  return h;
+}
+function bindDeck() {
+  const el = document.querySelector('.deck'); if (!el) return;
+  let x0 = null, y0 = 0;
+  el.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive:true });
+  el.addEventListener('touchend', e => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) { S.deckI = (S.deckI || 0) + (dx < 0 ? 1 : -1); S.deckSwap = true; render(); }
+  });
+  if (S.deckSwap) { const c = el.querySelector('.lcard'); c.classList.add('swap-in'); S.deckSwap = false; }
 }
 function walletRow(w, bal) {
   const g = wGroup(w), b = bal[w.id] || 0, goal = D.goals.find(x => x.walletId === w.id);
@@ -1295,6 +1344,7 @@ function render() {
   $('#hdr').innerHTML = header(v);
   const views = { home:vHome, stats:vStats, wallets:vWallets, profile:vProfile, tx:vTx, debt:vDebt, budget:vBudget, recur:vRecur, goals:vGoals };
   $('#app').innerHTML = views[v]();
+  if (v === 'wallets') bindDeck();
   if (v === 'tx') { const q = $('#q'); q.oninput = () => { const had = !!S.f.q; S.f.q = q.value; if (had !== !!S.f.q) { render(); const n = $('#q'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); } else drawTxList(); }; drawTxList(); }
   const navOn = MAIN.includes(v) ? v : S.back;
   document.querySelectorAll('#nav [data-id]').forEach(b => b.classList.toggle('on', b.dataset.id === navOn));
@@ -1340,6 +1390,7 @@ const ACT = {
   ftype: id => { S.f.type = id; render(); },
   fwallet: id => { S.f.wallet = id; render(); },
   fcat: () => { S.f.cat = ''; render(); },
+  deckTo: id => { S.deckI = +id; S.deckSwap = true; render(); },
   toggleArch: () => { S.showArch = !S.showArch; render(); },
   budget: id => openBudgetForm(D.budgets.find(b => b.id === id)),
   addBudget: () => openBudgetForm(),
@@ -1609,7 +1660,7 @@ function openTxForm(t, preset = {}) {
 
   function draw() {
     el.body.innerHTML = `
-    ${sys ? `<div class="pill" style="margin:4px 0 0;padding-right:12px">${ic(sys.icon, 15)}${sys.name}</div>` : preset.recur ? '' : `<div id="f-type"></div>`}
+    ${sys ? `<div class="pill" style="margin:4px 0 0;padding-right:12px">${ic(sys.icon, 15)}${sys.name}</div>` : preset.recur ? '<div class="flabel" style="margin-top:6px">Bayar pakai</div><div id="f-pay"></div>' : `<div id="f-type"></div>`}
     <div class="amt-box" id="f-box"><div class="amt"><span>Rp</span><input id="f-amt" inputmode="numeric" placeholder="0" value="${fmtNum(f.amount)}" autocomplete="off"></div></div>
     <div class="smart">${ic('sparkles', 18)}<input id="f-note" placeholder="${f.type === 'transfer' ? 'Catatan (opsional)' : 'Catatan: kopi 25rb, gojek, gaji…'}" value="${esc(f.note)}" maxlength="200" autocomplete="off" enterkeyhint="done"></div>
     <div class="shint" id="f-hint"></div>
@@ -1618,8 +1669,16 @@ function openTxForm(t, preset = {}) {
     ${edit ? `<div class="btns">${sys ? '<span></span>' : `<button class="btn" data-f="dup">${ic('copy', 17)}Duplikat</button>`}<button class="btn danger" data-f="del">${ic('trash', 17)}Hapus</button></div>` : ''}`;
     const note = $b('#f-note'), amt = $b('#f-amt');
     note.oninput = () => { f.note = note.value; think(); };
-    amt.oninput = () => { st.amtManual = true; f.amount = digits(amt.value); amt.value = fmtNum(f.amount); };
-    drawType(); drawCats(); drawDetail(); drawHint();
+    amt.oninput = () => { st.amtManual = true; f.amount = digits(amt.value); amt.value = fmtNum(f.amount); drawPay(); };
+    drawType(); drawCats(); drawDetail(); drawHint(); drawPay();
+  }
+  // Bayar tagihan: kartu akun (logo + saldo) untuk memilih sumber dana.
+  function drawPay() {
+    const box = $b('#f-pay'); if (!box) return;
+    const bal = balances(), ws = activeWallets().filter(w => wGroup(w) !== 'invest');
+    box.innerHTML = `<div class="wpick">${ws.map(w => { const b = bal[w.id] || 0, after = b - (f.type === 'income' ? -f.amount : f.amount);
+      return `<button class="wp ${w.id === f.walletId ? 'on' : ''}" data-f="payw" data-v="${w.id}">${wicon(w, 'xs')}<span><b>${esc(w.name)}</b><small class="${w.id === f.walletId && after < 0 && wGroup(w) === 'liquid' ? 'exp' : ''}">${money(w.id === f.walletId && f.amount ? after : b)}</small></span></button>`; }).join('')}</div>`;
+    const on = box.querySelector('.wp.on'); if (on) on.parentElement.scrollLeft = on.offsetLeft - on.parentElement.offsetLeft - 16;
   }
   function drawType() {
     const box = $b('#f-type'); if (box) box.innerHTML = segHtml('type', [['expense', 'Pengeluaran'], ['income', 'Pemasukan'], ['transfer', 'Transfer']], f.type);
@@ -1676,6 +1735,7 @@ function openTxForm(t, preset = {}) {
   el.body.addEventListener('click', async e => {
     const b = e.target.closest('[data-f]'); if (!b) return;
     const k = b.dataset.f;
+    if (k === 'payw') { f.walletId = b.dataset.v; if (f.toWalletId === f.walletId) f.toWalletId = ''; drawPay(); drawDetail(); return; }
     if (k === 'type') {
       if (f.type === b.dataset.v) return;
       f.type = b.dataset.v; st.typeManual = true; st.catManual = false; f.categoryId = '';
