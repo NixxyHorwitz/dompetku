@@ -312,7 +312,8 @@ b,.num{font-variant-numeric:tabular-nums}
 .amt input{width:1ch;min-width:1ch;max-width:calc(100% - 40px);padding-right:2px;border:0;background:none;outline:0;font-size:38px;font-weight:600;text-align:center;caret-color:var(--accent);font-variant-numeric:tabular-nums}
 .amt-box.exp .amt input{color:var(--exp)} .amt-box.inc .amt input{color:var(--inc)}
 .cgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.deck{position:relative;touch-action:pan-y}
+.deck{position:relative;touch-action:none;user-select:none;-webkit-user-select:none}
+.lcard{transition:transform .25s cubic-bezier(.32,.72,0,1)}
 .peek{position:absolute;left:0;right:0;height:56px;border-radius:20px 20px 0 0;display:flex;justify-content:space-between;align-items:flex-start;padding:10px 18px;color:#fff;font-size:12.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;box-shadow:0 -2px 10px rgba(0,0,0,.18)}
 .peek span:last-child{font-weight:500;letter-spacing:0;text-transform:none;opacity:.9}
 .lcard{position:relative;height:186px;border-radius:22px;color:#fff;padding:16px 18px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;cursor:pointer;
@@ -331,6 +332,8 @@ b,.num{font-variant-numeric:tabular-nums}
 .dots i.on{width:18px;background:var(--accent);opacity:1}
 .swap-in{animation:swapin .3s cubic-bezier(.32,.72,0,1)}
 @keyframes swapin{from{transform:translateY(-16px) scale(.97);opacity:.5}to{transform:none;opacity:1}}
+.swap-up{animation:swapup .3s cubic-bezier(.32,.72,0,1)}
+@keyframes swapup{from{transform:translateY(22px) scale(.97);opacity:.5}to{transform:none;opacity:1}}
 .cchips{display:flex;gap:6px;overflow-x:auto;margin:10px calc(-1 * var(--px)) 0;padding:0 var(--px) 2px;scrollbar-width:none}
 .cchips::-webkit-scrollbar{display:none}
 .cchips.wrap{flex-wrap:wrap;overflow:visible}
@@ -345,6 +348,13 @@ b,.num{font-variant-numeric:tabular-nums}
 .meta select,.meta input[type=date]{position:absolute;inset:0;opacity:0;width:100%;height:100%;font-size:16px}
 .meta.fee input{width:76px;border:0;background:none;outline:0;color:var(--text);font-size:16px;padding:0}
 .meta.fee span{color:var(--sub)}
+.tv{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;padding:6px 0 2px}
+.tv-amt{font-size:32px;font-weight:600;margin-top:6px;font-variant-numeric:tabular-nums}
+.tv-amt.exp{color:var(--exp)} .tv-amt.inc{color:var(--inc)}
+.tv-cat{font-size:14px;color:var(--sub)}
+.tv-note{font-size:15px;margin-top:4px;max-width:90%;word-break:break-word}
+.fv{flex:1;display:flex;align-items:center;justify-content:flex-end;gap:7px;text-align:right;color:var(--sub);min-width:0}
+.fv span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .meta.hl{background:rgba(236,72,153,.14);color:#EC4899}
 .meta.ph{padding:0;gap:0;overflow:hidden}
 .meta.ph button{display:flex;align-items:center;gap:6px;padding:4px 10px 4px 4px;color:inherit;font-size:13px}
@@ -1140,7 +1150,7 @@ function vWallets() {
     </div>
   </section>
   <div class="btns" style="margin-top:12px"><button class="btn" data-act="move">${ic('swap', 18)}Pindah Saldo</button><button class="btn" data-act="addWallet">${ic('plus', 18, 'b')}Tambah Akun</button></div>
-  ${byGroup('liquid').length ? `<div class="sec"><h3>Kartu Saya</h3><span class="sum">Geser untuk ganti</span></div>${deck(byGroup('liquid'), bal)}` : ''}
+  ${byGroup('liquid').length ? `<div class="sec"><h3>Kartu Saya</h3><span class="sum">Geser atas / bawah</span></div>${deck(byGroup('liquid'), bal)}` : ''}
   ${act.length ? SECTIONS.map(type => {
     const ws = act.filter(w => (WTYPES[w.type] ? w.type : 'other') === type); if (!ws.length) return '';
     const g = WTYPES[type].g, sum = ws.reduce((s, w) => s + (g === 'credit' ? Math.max(0, -(bal[w.id] || 0)) : bal[w.id] || 0), 0);
@@ -1166,16 +1176,26 @@ function deck(ws, bal) {
   if (n > 1) h += `<div class="dots">${ws.map((_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('')}</div>`;
   return h;
 }
+// Geser kartu depan ke atas = kartu berikutnya, ke bawah = kartu sebelumnya. Ketuk tanpa geser = buka detail.
 function bindDeck() {
   const el = document.querySelector('.deck'); if (!el) return;
-  let x0 = null, y0 = 0;
-  el.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive:true });
-  el.addEventListener('touchend', e => {
-    if (x0 === null) return;
-    const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
-    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) { S.deckI = (S.deckI || 0) + (dx < 0 ? 1 : -1); S.deckSwap = true; render(); }
+  const card = el.querySelector('.lcard');
+  let y0 = null, dy = 0, moved = false;
+  el.addEventListener('pointerdown', e => { y0 = e.clientY; dy = 0; moved = false; card.style.transition = 'none'; });
+  el.addEventListener('pointermove', e => {
+    if (y0 === null) return;
+    dy = e.clientY - y0; if (Math.abs(dy) > 6) moved = true;
+    card.style.transform = `translateY(${dy * .55}px) scale(${1 - Math.min(Math.abs(dy), 160) / 2000})`;
   });
-  if (S.deckSwap) { const c = el.querySelector('.lcard'); c.classList.add('swap-in'); S.deckSwap = false; }
+  const end = () => {
+    if (y0 === null) return;
+    y0 = null; card.style.transition = ''; card.style.transform = '';
+    if (Math.abs(dy) > 45) { S.deckI = (S.deckI || 0) + (dy < 0 ? 1 : -1); S.deckSwap = dy < 0 ? 'up' : 'down'; render(); }
+  };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end); el.addEventListener('pointerleave', end);
+  // ketukan yang sebenarnya geseran jangan membuka detail akun
+  el.addEventListener('click', e => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
+  if (S.deckSwap) { card.classList.add(S.deckSwap === 'up' ? 'swap-up' : 'swap-in'); S.deckSwap = false; }
 }
 function walletRow(w, bal) {
   const g = wGroup(w), b = bal[w.id] || 0, goal = D.goals.find(x => x.walletId === w.id);
@@ -1432,7 +1452,7 @@ const ACT = {
   tab: id => go(id),
   back: () => go(S.back),
   quick: id => openTxForm(null, { type:id }),
-  tx: id => { const t = D.transactions.find(x => x.id === id); if (t) openTxForm(t); },
+  tx: id => { const t = D.transactions.find(x => x.id === id); if (t) openTxView(t); },
   wallet: id => openWallet(id),
   editWallet: id => openWalletForm(wal(id)),
   addWallet: id => openWalletForm(null, id),
@@ -1727,7 +1747,7 @@ function openTxForm(t, preset = {}) {
   const sys = isSys(f) ? cat(f.categoryId) : null;
   // status pintar: kategori/jenis/nominal yang sudah disentuh manual tidak ditimpa tebakan
   const st = { catManual:edit || !!f.categoryId, typeManual:edit || !!preset.recur || !!sys || !!preset.walletId || !!preset.toWalletId, amtManual:edit || !!f.amount, why:'', parsed:null, all:false, withManual:edit || !!f.with, photoData:'', photoDrop:false };
-  const el = openSheet({ title:edit ? 'Detail Transaksi' : preset.recur ? 'Bayar Tagihan' : 'Transaksi Baru', right:'Simpan', onRight:save });
+  const el = openSheet({ title:edit ? 'Edit Transaksi' : preset.recur ? 'Bayar Tagihan' : 'Transaksi Baru', right:'Simpan', onRight:save });
   const $b = s => el.body.querySelector(s);
 
   function draw() {
@@ -1865,6 +1885,52 @@ function openTxForm(t, preset = {}) {
   draw();
 }
 
+
+/* ========================= Detail transaksi (baca-saja) ========================= */
+// Transaksi dibuka tanpa bisa diubah; perlu ketuk "Edit" dulu agar tidak teredit tanpa sengaja.
+function openTxView(t0) {
+  const el = openSheet({ title:'Detail Transaksi', left:'Tutup', right:'Edit', onRight:() => {
+    const t = D.transactions.find(x => x.id === t0.id); closeSheet(el); if (t) setTimeout(() => openTxForm(t), 200);
+  } });
+  el._refresh = () => {
+    const t = D.transactions.find(x => x.id === t0.id); if (!t) return closeSheet(el);
+    const isT = t.type === 'transfer', c = txCat(t), w = wal(t.walletId), to = wal(t.toWalletId);
+    const cls = isT || isSys(t) ? '' : t.type === 'income' ? 'inc' : 'exp';
+    const amt = isT ? money(t.amount) : money(t.type === 'income' ? t.amount : -t.amount, true);
+    const row = (label, val) => `<div class="field"><label>${label}</label><span class="fv">${val}</span></div>`;
+    const wl = x => x ? `${wicon(x, 'mn')}<span>${esc(x.name)}</span>` : '<span>Akun terhapus</span>';
+    el.body.innerHTML = `<div class="tv">${itile(c.icon, c.color, 'lg')}
+        <b class="tv-amt ${cls}">${amt}</b>
+        <span class="tv-cat">${esc(isT ? 'Transfer' : c.name)}${t.with ? ' · ' + withName(t.with) : ''}</span>
+        ${t.note ? `<p class="tv-note">${esc(t.note)}</p>` : ''}</div>
+      <div class="group mt">
+        ${row(isT ? 'Dari' : 'Akun', wl(w))}
+        ${isT ? row('Ke', wl(to)) : ''}
+        ${isT && t.fee ? row('Biaya admin', money(t.fee)) : ''}
+        ${row('Tanggal', dateLong(t.date))}
+        ${!isT ? row('Bersama', withName(t.with)) : ''}
+        ${row('Dicatat', fmtStamp(t.createdAt) || dateShort(t.date))}
+        ${t.updatedAt && String(t.updatedAt).slice(0, 16) !== String(t.createdAt).slice(0, 16) && fmtStamp(t.updatedAt) ? row('Diubah', fmtStamp(t.updatedAt)) : ''}
+      </div>
+      ${t.photo ? `<button class="btn mt" data-f="photo">${ic('camera', 18)}Lihat foto</button>` : ''}
+      <div class="btns">${isSys(t) ? '<span></span>' : `<button class="btn" data-f="dup">${ic('copy', 17)}Duplikat</button>`}<button class="btn danger" data-f="del">${ic('trash', 17)}Hapus</button></div>
+      <p class="hint" style="text-align:center">Ketuk <b>Edit</b> di kanan atas untuk mengubah transaksi ini.</p>`;
+  };
+  el.body.addEventListener('click', async e => {
+    const b = e.target.closest('[data-f]'); if (!b) return;
+    const t = D.transactions.find(x => x.id === t0.id); if (!t) return;
+    if (b.dataset.f === 'photo') viewPhoto(t.photo);
+    if (b.dataset.f === 'dup') {
+      const n = Object.assign({}, t, { id:uid(), date:today(), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(), photo:'' });
+      closeSheet(el); persist([['saveTx', n]], () => D.transactions.push(n), 'Transaksi diduplikat');
+    }
+    if (b.dataset.f === 'del') {
+      if (!await confirmBox('Hapus transaksi?', 'Saldo akun akan dihitung ulang.')) return;
+      closeSheet(el); persist([['deleteTx', t.id]], () => D.transactions = D.transactions.filter(x => x.id !== t.id), 'Transaksi dihapus');
+    }
+  });
+  el._refresh();
+}
 
 /* ========================= Pindah saldo ========================= */
 // Transfer antar akun dengan biaya admin opsional (dicatat sebagai pengeluaran "Biaya Transfer").
