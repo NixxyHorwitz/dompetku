@@ -312,8 +312,11 @@ b,.num{font-variant-numeric:tabular-nums}
 .amt input{width:1ch;min-width:1ch;max-width:calc(100% - 40px);padding-right:2px;border:0;background:none;outline:0;font-size:38px;font-weight:600;text-align:center;caret-color:var(--accent);font-variant-numeric:tabular-nums}
 .amt-box.exp .amt input{color:var(--exp)} .amt-box.inc .amt input{color:var(--inc)}
 .cgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.deck{position:relative;touch-action:none;user-select:none;-webkit-user-select:none}
-.lcard{transition:transform .25s cubic-bezier(.32,.72,0,1)}
+.deck2{position:relative;touch-action:none;user-select:none;-webkit-user-select:none}
+.deck2 .lcard{position:absolute;left:0;right:0;top:0;transform-origin:50% 0;will-change:transform,opacity;backface-visibility:hidden}
+.lc-body{position:absolute;inset:0;padding:16px 18px;display:flex;flex-direction:column;justify-content:space-between;z-index:1}
+.lc-peek{position:absolute;left:0;right:0;top:0;padding:9px 18px;display:flex;justify-content:space-between;font-size:12.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;z-index:2;opacity:0;pointer-events:none}
+.lc-peek span:last-child{font-weight:500;letter-spacing:0;text-transform:none;opacity:.92}
 .peek{position:absolute;left:0;right:0;height:56px;border-radius:20px 20px 0 0;display:flex;justify-content:space-between;align-items:flex-start;padding:10px 18px;color:#fff;font-size:12.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;box-shadow:0 -2px 10px rgba(0,0,0,.18)}
 .peek span:last-child{font-weight:500;letter-spacing:0;text-transform:none;opacity:.9}
 .lcard{position:relative;height:186px;border-radius:22px;color:#fff;padding:16px 18px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;cursor:pointer;
@@ -324,7 +327,7 @@ b,.num{font-variant-numeric:tabular-nums}
 .lc-ic{width:44px;height:44px;border-radius:13px;background:#fff;display:grid;place-items:center;flex-shrink:0;overflow:hidden}
 .lc-top b{flex:1;font-size:16px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lc-type{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;opacity:.92}
-.lcard>div:last-child{position:relative;z-index:1}
+.lc-body>div:last-child{position:relative;z-index:1}
 .lcard small{font-size:11px;font-weight:600;letter-spacing:.07em;opacity:.8}
 .lc-amt{font-size:28px;font-weight:700;margin-top:1px;font-variant-numeric:tabular-nums}
 .dots{display:flex;justify-content:center;gap:5px;margin-top:10px}
@@ -972,13 +975,26 @@ function api(fn, ...args) {
   });
 }
 // Simpan optimis: tampilan langsung berubah, dibatalkan bila server gagal.
+let mutated = false;
 async function persist(calls, apply, okMsg) {
   const snap = JSON.stringify(D);
+  mutated = true;
   apply(); render();
   if (okMsg) toast(okMsg);
-  try { for (const [fn, ...args] of calls) await api(fn, ...args); }
+  try { for (const [fn, ...args] of calls) await api(fn, ...args); saveCache(); }
   catch (e) { setData(JSON.parse(snap)); render(); toast(e.message || 'Gagal menyimpan', true); }
 }
+// Cache data terakhir di HP agar aplikasi langsung tampil saat dibuka (data segar menyusul dari server).
+// Tidak dipakai bila PIN aktif, supaya data tidak terbaca tanpa PIN.
+const CACHE_KEY = 'dk_cache_v1';
+function saveCache() {
+  try {
+    if (D.hasPin || !IS_LIVE()) return localStorage.removeItem(CACHE_KEY);
+    localStorage.setItem(CACHE_KEY, JSON.stringify(D));
+  } catch (e) {}
+}
+function readCache() { try { const c = JSON.parse(localStorage.getItem(CACHE_KEY)); return c && !c.hasPin && Array.isArray(c.wallets) ? c : null; } catch (e) { return null; } }
+const IS_LIVE = () => !!(API_URL || IS_GAS);
 const upsertLocal = (arr, o) => { const i = arr.findIndex(x => x.id === o.id); if (i >= 0) arr[i] = o; else arr.push(o); };
 
 /* ========================= Komponen ========================= */
@@ -1150,7 +1166,7 @@ function vWallets() {
     </div>
   </section>
   <div class="btns" style="margin-top:12px"><button class="btn" data-act="move">${ic('swap', 18)}Pindah Saldo</button><button class="btn" data-act="addWallet">${ic('plus', 18, 'b')}Tambah Akun</button></div>
-  ${byGroup('liquid').length ? `<div class="sec"><h3>Kartu Saya</h3><span class="sum">Geser atas / bawah</span></div>${deck(byGroup('liquid'), bal)}` : ''}
+  ${byGroup('liquid').length ? `<div class="sec"><h3>Kartu Saya</h3><span class="sum">Tarik atas / bawah</span></div>${deck(byGroup('liquid'), bal)}` : ''}
   ${act.length ? SECTIONS.map(type => {
     const ws = act.filter(w => (WTYPES[w.type] ? w.type : 'other') === type); if (!ws.length) return '';
     const g = WTYPES[type].g, sum = ws.reduce((s, w) => s + (g === 'credit' ? Math.max(0, -(bal[w.id] || 0)) : bal[w.id] || 0), 0);
@@ -1159,43 +1175,81 @@ function vWallets() {
   ${arch.length ? `<button class="link-btn" data-act="toggleArch">${S.showArch ? 'Sembunyikan' : 'Tampilkan'} akun diarsipkan (${arch.length})</button>
     ${S.showArch ? `<div class="stack" style="opacity:.6">${arch.map(w => walletRow(w, bal)).join('')}</div>` : ''}` : ''}`;
 }
-// Tumpukan kartu: kartu aktif di depan, dua kartu berikutnya mengintip di atasnya.
+// Tumpukan kartu yang bergulir: semua kartu dirender sekali, posisinya dihitung dari nilai `pos` (desimal)
+// sehingga kartu mengikuti jari secara kontinu lalu berhenti mulus di kartu terdekat.
+const DECK = { step:32, h:186 };
 function deck(ws, bal) {
-  const n = ws.length, i = ((S.deckI || 0) % n + n) % n; S.deckI = i;
-  const peeks = Math.min(2, n - 1), step = 34;
-  let h = `<div class="deck" style="padding-top:${peeks * step}px">`;
-  for (let k = peeks; k >= 1; k--) {
-    const w = ws[(i + k) % n];
-    h += `<button class="peek" style="top:${(peeks - k) * step}px;margin:0 ${k * 9}px;background:linear-gradient(120deg,${shade(w.color, -.05)},${shade(w.color, .2)})" data-act="deckTo" data-id="${(i + k) % n}">
-      <span>${esc(w.name)}</span><span>${money(bal[w.id] || 0)}</span></button>`;
-  }
-  const w = ws[i], k = wLogo(w);
-  h += `<div class="lcard" data-act="wallet" data-id="${w.id}" style="background:linear-gradient(140deg,${shade(w.color, -.12)} 0%,${w.color} 50%,${shade(w.color, .3)} 100%)">
-    <div class="lc-top"><span class="lc-ic">${k ? logoImg(k, 'sm') : itile(wt(w).i, w.color, 'sm')}</span><b>${esc(w.name)}</b><span class="lc-type">${ic('nfc', 15)}${esc(wt(w).l)}</span></div>
-    <div><small>SALDO</small><div class="lc-amt">${money(bal[w.id] || 0)}</div></div></div></div>`;
-  if (n > 1) h += `<div class="dots">${ws.map((_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('')}</div>`;
-  return h;
+  const n = ws.length; S.deckI = ((S.deckI || 0) % n + n) % n;
+  return `<div class="deck2" style="height:${DECK.h + DECK.step * Math.min(2, n - 1)}px">${ws.map((w, i) => { const k = wLogo(w);
+    return `<div class="lcard" data-i="${i}" data-wid="${w.id}" style="background:linear-gradient(140deg,${shade(w.color, -.12)} 0%,${w.color} 50%,${shade(w.color, .3)} 100%)">
+      <div class="lc-peek"><span>${esc(w.name)}</span><span>${money(bal[w.id] || 0)}</span></div>
+      <div class="lc-body"><div class="lc-top"><span class="lc-ic">${k ? logoImg(k, 'sm') : itile(wt(w).i, w.color, 'sm')}</span><b>${esc(w.name)}</b><span class="lc-type">${ic('nfc', 15)}${esc(wt(w).l)}</span></div>
+      <div><small>SALDO</small><div class="lc-amt">${money(bal[w.id] || 0)}</div></div></div></div>`; }).join('')}</div>
+    ${n > 1 ? `<div class="dots">${ws.map((_, j) => `<i class="${j === S.deckI ? 'on' : ''}"></i>`).join('')}</div>` : ''}`;
 }
-// Geser kartu depan ke atas = kartu berikutnya, ke bawah = kartu sebelumnya. Ketuk tanpa geser = buka detail.
 function bindDeck() {
-  const el = document.querySelector('.deck'); if (!el) return;
-  const card = el.querySelector('.lcard');
-  let y0 = null, dy = 0, moved = false;
-  el.addEventListener('pointerdown', e => { y0 = e.clientY; dy = 0; moved = false; card.style.transition = 'none'; });
+  const el = document.querySelector('.deck2'); if (!el) return;
+  const cards = [...el.querySelectorAll('.lcard')], n = cards.length, dots = [...document.querySelectorAll('.dots i')];
+  const peeks = Math.min(2, n - 1), { step, h } = DECK;
+  let pos = S.deckI, anim = 0, raf = 0;
+  const mod = v => ((v % n) + n) % n;
+  // d = jarak kartu dari depan: 0 depan, 1-2 mengintip di atas, <0 sedang keluar ke bawah
+  const lay = () => {
+    raf = 0;
+    cards.forEach((c, i) => {
+      let d = mod(i - pos); if (d > n - 1) d -= n;
+      let y, sc, op, z;
+      // kartu yang keluar turun sedikit dan cepat memudar (tidak menimpa daftar di bawahnya)
+      if (d < 0) { y = peeks * step - d * h * .28; sc = 1 + d * .04; op = Math.min(1, Math.max(0, 1 + (d + .22) * 3)); z = 45; } // keluar lewat belakang kartu yang masuk
+      else { const dd = Math.min(d, peeks); y = (peeks - dd) * step; sc = 1 - dd * .05; op = d > peeks ? Math.max(0, peeks + 1 - d) : 1; z = 50 - Math.round(d * 10); }
+      const clamp = v => Math.min(1, Math.max(0, v));
+      c.style.transform = `translate3d(0,${y.toFixed(1)}px,0) scale(${sc.toFixed(4)})`;
+      c.style.opacity = op.toFixed(3); c.style.zIndex = z;
+      // isi kartu dan label intip tidak tampil bersamaan
+      c.querySelector('.lc-peek').style.opacity = clamp((d - .55) * 3).toFixed(3);
+      c.querySelector('.lc-body').style.opacity = (d < 0 ? 1 : clamp(1 - (d - .2) * 2.8)).toFixed(3);
+    });
+    const on = mod(Math.round(pos)); dots.forEach((x, j) => x.classList.toggle('on', j === on));
+  };
+  const queue = () => { if (!raf) raf = requestAnimationFrame(lay); };
+  const settle = target => {
+    cancelAnimationFrame(anim);
+    const from = pos, t0 = performance.now(), dur = Math.min(520, 260 + Math.abs(target - from) * 160);
+    const tick = now => {
+      const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      pos = from + (target - from) * e; lay();
+      if (k < 1) anim = requestAnimationFrame(tick); else { pos = target; S.deckI = mod(target); lay(); }
+    };
+    anim = requestAnimationFrame(tick);
+  };
+  let y0 = null, p0 = 0, moved = false, vy = 0, lastY = 0, lastT = 0;
+  el.addEventListener('pointerdown', e => {
+    cancelAnimationFrame(anim); y0 = lastY = e.clientY; lastT = performance.now(); p0 = pos; moved = false; vy = 0;
+    try { el.setPointerCapture(e.pointerId); } catch (err) {}
+  });
   el.addEventListener('pointermove', e => {
     if (y0 === null) return;
-    dy = e.clientY - y0; if (Math.abs(dy) > 6) moved = true;
-    card.style.transform = `translateY(${dy * .55}px) scale(${1 - Math.min(Math.abs(dy), 160) / 2000})`;
+    const now = performance.now(), dy = e.clientY - y0;
+    if (Math.abs(dy) > 5) moved = true;
+    vy = .8 * vy + .2 * ((e.clientY - lastY) / Math.max(1, now - lastT)); lastY = e.clientY; lastT = now;
+    pos = p0 + dy / h; queue();
   });
-  const end = () => {
+  const end = e => {
     if (y0 === null) return;
-    y0 = null; card.style.transition = ''; card.style.transform = '';
-    if (Math.abs(dy) > 45) { S.deckI = (S.deckI || 0) + (dy < 0 ? 1 : -1); S.deckSwap = dy < 0 ? 'up' : 'down'; render(); }
+    y0 = null;
+    if (!moved) {
+      // ketuk: kartu depan membuka detail, kartu yang mengintip dibawa ke depan
+      const c = e && e.target.closest && e.target.closest('.lcard'); if (!c) return settle(Math.round(pos));
+      const i = +c.dataset.i, front = mod(Math.round(pos));
+      if (i === front) { settle(Math.round(pos)); openWallet(c.dataset.wid); }
+      else { let d = mod(i - pos); if (d > n / 2) d -= n; settle(Math.round(pos + d)); }
+      return;
+    }
+    const fling = Math.max(-1, Math.min(1, vy * 100 / h)); // dorongan cepat menambah maks. 1 kartu
+    settle(Math.round(pos + fling));
   };
-  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end); el.addEventListener('pointerleave', end);
-  // ketukan yang sebenarnya geseran jangan membuka detail akun
-  el.addEventListener('click', e => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
-  if (S.deckSwap) { card.classList.add(S.deckSwap === 'up' ? 'swap-up' : 'swap-in'); S.deckSwap = false; }
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+  lay();
 }
 function walletRow(w, bal) {
   const g = wGroup(w), b = bal[w.id] || 0, goal = D.goals.find(x => x.walletId === w.id);
@@ -1475,7 +1529,6 @@ const ACT = {
   ftype: id => { S.f.type = id; render(); },
   fwallet: id => { S.f.wallet = id; render(); },
   fcat: () => { S.f.cat = ''; render(); },
-  deckTo: id => { S.deckI = +id; S.deckSwap = true; render(); },
   toggleArch: () => { S.showArch = !S.showArch; render(); },
   budget: id => openBudgetForm(D.budgets.find(b => b.id === id)),
   addBudget: () => openBudgetForm(),
@@ -2443,9 +2496,9 @@ function applyTheme() {
   if (S.theme === 'auto') delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = S.theme;
 }
-async function reload() {
+async function reload(quiet) {
   const b = $('#btn-sync'); if (b) b.classList.add('spinning');
-  try { setData(await api('getAll')); render(); toast('Data tersinkron'); }
+  try { setData(await api('getAll')); saveCache(); render(); if (!quiet) toast('Data tersinkron'); }
   catch (e) { toast(e.message || 'Gagal memuat', true); render(); }
 }
 
@@ -2479,14 +2532,14 @@ async function pinSetup() {
     if (!c) return;
     old = await askPin('PIN Saat Ini'); if (!old) return;
     if (c === 'off') {
-      try { await api('setPin', old, ''); D.hasPin = false; render(); toast('PIN dinonaktifkan'); } catch (e) { toast(e.message, true); }
+      try { await api('setPin', old, ''); D.hasPin = false; saveCache(); render(); toast('PIN dinonaktifkan'); } catch (e) { toast(e.message, true); }
       return;
     }
   }
   const a = await askPin('PIN Baru (4 angka)'); if (!a) return;
   const b = await askPin('Ulangi PIN Baru'); if (!b) return;
   if (a !== b) return toast('PIN tidak cocok', true);
-  try { await api('setPin', old, a); D.hasPin = true; render(); toast('PIN diaktifkan'); } catch (e) { toast(e.message, true); }
+  try { await api('setPin', old, a); D.hasPin = true; saveCache(); render(); toast('PIN diaktifkan'); } catch (e) { toast(e.message, true); }
 }
 function showLock(first) {
   if ($('#lock')) return;
@@ -2648,11 +2701,16 @@ function hideSplash() { const s = $('#splash'); if (!s) return; s.classList.add(
 async function start() {
   applyTheme(); drawNav();
   $('#sp-logo').innerHTML = ic('wallet', 30);
+  const cached = IS_LIVE() ? readCache() : null;
+  if (cached) { setData(cached); render(); hideSplash(); }
   try {
     const r = await api('boot');
-    if (r.hasPin) { D.hasPin = true; showLock(true); return; }
-    setData(r.data); render(); hideSplash();
+    if (r.hasPin) { try { localStorage.removeItem(CACHE_KEY); } catch (e) {} D.hasPin = true; showLock(true); return; }
+    if (cached && mutated) return reload(true); // ada perubahan selama memuat: ambil ulang setelah tersimpan
+    const sc = $('#scroll').scrollTop;
+    setData(r.data); saveCache(); render(); $('#scroll').scrollTop = sc; hideSplash();
   } catch (e) {
+    if (cached) return toast('Offline · menampilkan data terakhir', true);
     $('#sp-msg').innerHTML = `${esc(e.message || 'Gagal memuat')}<br><button class="btn" style="margin-top:12px" onclick="location.reload()">Coba lagi</button>`;
     const sp = document.querySelector('.spin'); if (sp) sp.remove();
   }
