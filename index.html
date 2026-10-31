@@ -81,6 +81,14 @@ b,.num{font-variant-numeric:tabular-nums}
 .cd .ce i{display:block}
 .cd .ce i.paid{opacity:.4}
 .cd .ce em{font-style:normal;font-size:9.5px;color:var(--sub);margin-left:1px}
+.cd .cx{font-size:9.5px;font-weight:600;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;max-width:100%;overflow:hidden;white-space:nowrap}
+.cd .cx.exp{color:var(--exp)} .cd .cx.inc{color:var(--inc)}
+.cd.has{background:var(--heat)}
+.cd.has.sel{background:var(--card3)}
+.cal-sum{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.cal-sum>div{background:var(--card);border-radius:14px;padding:9px 11px;min-width:0}
+.cal-sum small{display:block;font-size:11px;color:var(--sub)}
+.cal-sum b{display:block;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cd.today .cn{background:var(--text);color:var(--bg)}
 .cd.sel{background:var(--card3)}
 .cd.late .cn{color:var(--exp)}
@@ -1356,27 +1364,45 @@ function evRow(e) {
     <span class="tx-s">${badge}<span>${dateShort(e.d)} · ${FREQ[r.freq]}</span></span></button>
     ${payable ? `<button class="pay" data-act="payBill" data-id="${r.id}">Bayar</button>` : `<span class="wr"><b class="${r.type === 'income' ? 'inc' : ''}">${money(amt)}</b></span>`}</div>`;
 }
+// Kalender: tiap tanggal menampilkan tagihan (ikon) dan total transaksi hari itu.
 function vCal() {
-  const m = S.calM, ev = billEvents(m), byDay = {};
+  const m = S.calM, ev = billEvents(m), byDay = {}, txDay = {};
   ev.forEach(e => (byDay[e.d] = byDay[e.d] || []).push(e));
+  const txs = sortTx(monthTx(m));
+  let tIn = 0, tOut = 0, maxOut = 0;
+  txs.forEach(t => {
+    const x = txDay[t.date] = txDay[t.date] || { inc:0, exp:0, n:0 };
+    x.n++;
+    if (isSys(t)) return;
+    if (t.type === 'income') { x.inc += t.amount; tIn += t.amount; }
+    else if (t.type === 'expense') { x.exp += t.amount; tOut += t.amount; }
+    else if (t.fee) { x.exp += t.fee; tOut += t.fee; }
+  });
+  Object.values(txDay).forEach(x => { if (x.exp > maxOut) maxOut = x.exp; });
   const lead = (parseD(m + '-01').getDay() + 6) % 7, cells = [];
   for (let i = 0; i < lead; i++) cells.push('<span></span>');
   for (let d = 1; d <= daysIn(m); d++) {
-    const ds = `${m}-${pad(d)}`, L = byDay[ds] || [];
-    const cls = (ds === today() ? ' today' : '') + (ds === S.calDay ? ' sel' : '') + (L.some(e => e.st === 'late') ? ' late' : '');
-    cells.push(`<button class="cd${cls}" data-act="calDay" data-id="${ds}"><span class="cn">${d}</span><span class="ce">${L.slice(0, 2).map(e => `<i class="${e.st}">${recIcon(e.r, 'mn')}</i>`).join('')}${L.length > 2 ? `<em>+${L.length - 2}</em>` : ''}</span></button>`);
+    const ds = `${m}-${pad(d)}`, L = byDay[ds] || [], x = txDay[ds];
+    const cls = (ds === today() ? ' today' : '') + (ds === S.calDay ? ' sel' : '') + (L.some(e => e.st === 'late') ? ' late' : '') + (x && x.exp ? ' has' : '');
+    // warna latar makin pekat bila pengeluaran hari itu makin besar
+    const heat = x && x.exp && maxOut ? ` style="--heat:rgba(255,92,92,${(.05 + .3 * Math.pow(x.exp / maxOut, .8)).toFixed(3)})"` : '';
+    const amt = x ? x.exp ? `<span class="cx exp">${short(-x.exp)}</span>` : x.inc ? `<span class="cx inc">+${short(x.inc)}</span>` : '' : '';
+    const icons = L.length ? `<span class="ce">${L.slice(0, 2).map(e => `<i class="${e.st}">${recIcon(e.r, 'mn')}</i>`).join('')}${L.length > 2 ? `<em>+${L.length - 2}</em>` : ''}</span>` : '';
+    cells.push(`<button class="cd${cls}"${heat} data-act="calDay" data-id="${ds}"><span class="cn">${d}</span>${icons}${amt}</button>`);
   }
-  const out = e => e.r.type !== 'income';
-  const unpaid = ev.filter(e => e.st !== 'paid' && out(e)).reduce((s, e) => s + e.r.amount, 0);
-  const paid = ev.filter(e => e.st === 'paid' && out(e)).reduce((s, e) => s + e.t.amount, 0);
-  const list = S.calDay ? byDay[S.calDay] || [] : ev;
+  const sm = n => n >= 1e7 ? 'Rp' + short(n) : money(n);
+  const unpaid = ev.filter(e => e.st !== 'paid' && e.r.type !== 'income').reduce((s, e) => s + e.r.amount, 0);
+  const day = S.calDay, bills = day ? byDay[day] || [] : ev, dtx = day ? txs.filter(t => t.date === day) : txs;
+  const dx = day && txDay[day], dnet = dx ? dx.inc - dx.exp : 0;
   return `${recTabs()}
   <div class="pnav"><button data-act="calMove" data-id="-1">${ic('chevL', 20, 'b')}</button><b>${monthName(m)}</b><button data-act="calMove" data-id="1">${ic('chevR', 20, 'b')}</button></div>
   <div class="card cal"><div class="cw">${['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map(x => `<span>${x}</span>`).join('')}</div><div class="c7">${cells.join('')}</div></div>
-  <div class="strip mt" style="grid-template-columns:1fr 1fr"><div><small>Belum dibayar</small><b class="exp">${money(unpaid)}</b></div><div><small>Sudah dibayar</small><b class="inc">${money(paid)}</b></div></div>
-  <div class="sec"><h3>${S.calDay ? dateLong(S.calDay) : 'Bulan ini'}</h3>${S.calDay ? '<button class="lk" data-act="calDay" data-id="">Lihat semua</button>' : `<span class="sum">${ev.length} jadwal</span>`}</div>
-  <div class="stack">${list.length ? list.map(evRow).join('') : empty('calendar', 'Tidak ada tagihan', S.calDay ? 'Tidak ada jadwal di tanggal ini' : 'Tambahkan tagihan atau langganan')}</div>
-  <button class="btn primary mt" data-act="addRecur">${ic('plus', 18, 'b')}Tambah Tagihan</button>`;
+  <div class="cal-sum mt"><div><small>Pengeluaran</small><b class="exp">${sm(tOut)}</b></div><div><small>Pemasukan</small><b class="inc">${sm(tIn)}</b></div><div><small>Tagihan sisa</small><b>${sm(unpaid)}</b></div></div>
+  ${day ? `<div class="sec"><h3>${dateLong(day)}</h3><button class="lk" data-act="calDay" data-id="">Lihat sebulan</button></div>` : ''}
+  ${bills.length ? `<div class="sec"><h3>Tagihan</h3><span class="sum">${bills.length} jadwal</span></div><div class="stack">${bills.map(evRow).join('')}</div>` : ''}
+  <div class="sec"><h3>Transaksi</h3><span class="sum">${day ? (dnet ? `<b class="${dnet < 0 ? 'exp' : 'inc'}">${money(dnet, true)}</b>` : dtx.length + ' catatan') : dtx.length + ' catatan'}</span></div>
+  ${dtx.length ? day ? `<div class="stack">${dtx.map(t => txRow(t)).join('')}</div>` : groupedTx(dtx) : `<div class="stack">${empty('calendar', 'Belum ada transaksi', day ? 'Tidak ada catatan di tanggal ini' : 'Belum ada catatan bulan ini')}</div>`}
+  <div class="btns mt"><button class="btn" data-act="addRecur">${ic('plus', 17, 'b')}Tagihan</button><button class="btn primary" data-act="calAddTx">${ic('plus', 17, 'b')}Transaksi${day ? ' ' + dateShort(day) : ''}</button></div>`;
 }
 function vRecur() {
   if (S.recTab === 'cal') return vCal();
@@ -1538,6 +1564,7 @@ const ACT = {
   recTab: id => { S.recTab = id; render(); },
   calDay: id => { S.calDay = S.calDay === id ? '' : id; render(); },
   calMove: id => { S.calM = shiftMonth(S.calM, +id); S.calDay = ''; render(); },
+  calAddTx: () => openTxForm(null, S.calDay && S.calDay <= today() ? { date:S.calDay } : {}),
   recur: id => openRecurForm(D.recurring.find(r => r.id === id)),
   addRecur: () => openRecurForm(null, S.recTab === 'auto', S.recTab === 'cal' && S.calDay && S.calDay >= today() ? S.calDay : ''),
   payBill: id => payBill(D.recurring.find(r => r.id === id)),
@@ -1793,7 +1820,7 @@ function openTxForm(t, preset = {}) {
   const lastW = ls('lastWallet');
   const defW = wal(lastW) && !wal(lastW).archived ? lastW : (firstLiquid() || act[0]).id;
   const f = t ? Object.assign({}, t) : {
-    id:uid(), type:preset.type || 'expense', amount:preset.amount || 0, fee:0, note:preset.note || '', date:today(), categoryId:preset.categoryId || '', refId:preset.refId || '',
+    id:uid(), type:preset.type || 'expense', amount:preset.amount || 0, fee:0, note:preset.note || '', date:preset.date || today(), categoryId:preset.categoryId || '', refId:preset.refId || '',
     walletId:preset.walletId || defW, toWalletId:preset.toWalletId || '', createdAt:new Date().toISOString()
   };
   if (f.toWalletId === f.walletId) f.toWalletId = '';
