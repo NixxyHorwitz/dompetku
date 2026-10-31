@@ -345,6 +345,13 @@ b,.num{font-variant-numeric:tabular-nums}
 .meta select,.meta input[type=date]{position:absolute;inset:0;opacity:0;width:100%;height:100%;font-size:16px}
 .meta.fee input{width:76px;border:0;background:none;outline:0;color:var(--text);font-size:16px;padding:0}
 .meta.fee span{color:var(--sub)}
+.meta.hl{background:rgba(236,72,153,.14);color:#EC4899}
+.meta.ph{padding:0;gap:0;overflow:hidden}
+.meta.ph button{display:flex;align-items:center;gap:6px;padding:4px 10px 4px 4px;color:inherit;font-size:13px}
+.meta.ph button:last-child{padding:8px 9px;color:var(--sub);border-left:1px solid var(--line)}
+.meta.ph img{width:28px;height:28px;border-radius:8px;object-fit:cover}
+.photo-view{padding:16px;background:rgba(0,0,0,.85)}
+.photo-view img{max-width:100%;max-height:100%;border-radius:14px;object-fit:contain}
 .wpick{display:flex;gap:8px;overflow-x:auto;margin:0 calc(-1 * var(--px));padding:2px var(--px);scrollbar-width:none}
 .wpick::-webkit-scrollbar{display:none}
 .wp{flex:0 0 auto;display:flex;align-items:center;gap:9px;padding:8px 12px 8px 8px;border-radius:16px;background:var(--card);border:1.5px solid transparent;text-align:left;max-width:200px}
@@ -353,7 +360,8 @@ b,.num{font-variant-numeric:tabular-nums}
 .wp small{display:block;font-size:11.5px;color:var(--sub);white-space:nowrap}
 .mprev{display:flex;flex-direction:column;gap:10px}
 .mrow{display:flex;align-items:center;gap:10px;font-size:13.5px}
-.mrow span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrow>span:not(.tile){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile.ic{flex:0 0 auto}
 .mrow b{font-weight:500;white-space:nowrap;font-size:13px}
 .mrow em{font-style:normal;font-weight:600}
 .smart{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:16px;padding:0 14px;margin-top:8px;color:var(--accent)}
@@ -489,6 +497,7 @@ const ICONS = {
   calendar:'<rect class="f" x="3.5" y="5" width="17" height="15.5" rx="3"/><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
   sheet:'<rect class="f" x="4.5" y="3" width="15" height="18" rx="2.5"/><rect x="4.5" y="3" width="15" height="18" rx="2.5"/><path d="M8 9h8M8 13h8M8 17h8M12 9v8"/>',
   alert:'<path class="f" d="M12 3.5 2.5 20h19z"/><path d="M10.7 4.3 2.9 18a1.5 1.5 0 0 0 1.3 2.2h15.6a1.5 1.5 0 0 0 1.3-2.2L13.3 4.3a1.5 1.5 0 0 0-2.6 0z"/><path d="M12 9.5v4.5M12 17v.01"/>',
+  camera:'<path class="f" d="M3.5 8.5a2 2 0 0 1 2-2h2.5L10 4h4l2 2.5h2.5a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><path d="M3.5 8.5a2 2 0 0 1 2-2h2.5L10 4h4l2 2.5h2.5a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.5"/>',
   nfc:'<path d="M7 8.5a5 5 0 0 1 0 7M10.5 6a8.5 8.5 0 0 1 0 12M14 3.5a12 12 0 0 1 0 17"/>',
   sparkles:'<path class="f" d="M11 3c.6 4.2 2.8 6.4 7 7-4.2.6-6.4 2.8-7 7-.6-4.2-2.8-6.4-7-7 4.2-.6 6.4-2.8 7-7z"/><path d="M11 3c.6 4.2 2.8 6.4 7 7-4.2.6-6.4 2.8-7 7-.6-4.2-2.8-6.4-7-7 4.2-.6 6.4-2.8 7-7z"/><path d="M19 15c.2 1.6 1 2.3 2.5 2.5-1.5.2-2.3 1-2.5 2.5-.2-1.5-1-2.3-2.5-2.5 1.5-.2 2.3-.9 2.5-2.5z"/>',
   list:'<path d="M9 6h11M9 12h11M9 18h11"/><circle class="s" cx="4.5" cy="6" r="1.3"/><circle class="s" cx="4.5" cy="12" r="1.3"/><circle class="s" cx="4.5" cy="18" r="1.3"/>',
@@ -581,6 +590,8 @@ const ART = {
   wallet:'<path d="M8.5 12.5 30 6.4a2.2 2.2 0 0 1 2.8 2.1v4" fill="#FACC15"/><rect x="5" y="12.5" width="38" height="29" rx="4.5" fill="#B45309"/><rect x="29.5" y="21.5" width="14.5" height="11" rx="2.4" fill="#92400E"/><circle cx="35" cy="27" r="2" fill="#FACC15"/>',
   swap:'<circle cx="24" cy="24" r="19" fill="#0EA5E9"/><path d="M13.5 19.5h19l-4.5-4.5M34.5 28.5h-19l4.5 4.5" stroke="#fff" stroke-width="3.2"/>',
   refresh:'<circle cx="24" cy="24" r="19" fill="#94A3B8"/><path d="M33.5 20a10 10 0 1 0 .2 8" stroke="#fff" stroke-width="3.2"/><path d="M34.5 12.5v8h-8" stroke="#fff" stroke-width="3.2"/>',
+  scissors:'<path d="M16.5 30.5 35.5 5.5l2.6 2-17.1 24.5z" fill="#CBD5E1"/><path d="M31.5 30.5 12.5 5.5l-2.6 2 17.1 24.5z" fill="#E2E8F0"/><circle cx="13" cy="35.5" r="7" fill="#EC4899"/><circle cx="13" cy="35.5" r="3.2" fill="#FCE7F3"/><circle cx="35" cy="35.5" r="7" fill="#EC4899"/><circle cx="35" cy="35.5" r="3.2" fill="#FCE7F3"/><circle cx="24" cy="21.5" r="1.7" fill="#1E293B" stroke="none"/>',
+  ball:'<circle cx="24" cy="24" r="18.5" fill="#F8FAFC"/><path d="m24 15.5 7.5 5.4-2.9 8.6h-9.2l-2.9-8.6z" fill="#1E293B" stroke="none"/><path d="M24 5.5v10M31.5 20.9l9.5-3.2M28.6 29.5l5.6 8.2M19.4 29.5l-5.6 8.2M16.5 20.9 7 17.7"/>',
   loan:'<circle cx="18.5" cy="29" r="12.5" fill="#FACC15"/><circle cx="18.5" cy="29" r="8" stroke="#F59E0B"/><path d="M18.5 24.5v9" stroke="#B45309" stroke-width="2.4"/><path d="M28.5 7.5h12v12M40.5 7.5 27 21" stroke="#14B8A6" stroke-width="3.4"/>'
 };
 const art = (n, s = 28) => `<svg class="art" width="${s}" height="${s}" viewBox="0 0 48 48" aria-hidden="true"><g fill="none" stroke="#1E293B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ART[n]}</g></svg>`;
@@ -665,7 +676,7 @@ const GROUPS = {
   social:{ l:'Keluarga & Sosial', c:'#A855F7' }, other:{ l:'Lainnya', c:'#8C8F99' }
 };
 const COLORS = ['#3B82F6','#0EA5E9','#06B6D4','#14B8A6','#22C55E','#84CC16','#EAB308','#F59E0B','#F97316','#EF4444','#EC4899','#D946EF','#A855F7','#6366F1','#64748B','#8C8F99'];
-const CAT_ICONS = ['food','coffee','car','fuel','plane','bag','shirt','zap','wifi','receipt','home','heart','shield','book','film','game','users','gift','care','pet','card','briefcase','award','store','trend','coins','tag','dots','flag','phone'];
+const CAT_ICONS = ['food','coffee','car','fuel','plane','bag','shirt','scissors','ball','zap','wifi','receipt','home','heart','shield','book','film','game','users','gift','care','pet','card','briefcase','award','store','trend','coins','tag','dots','flag','phone'];
 const GOAL_ICONS = ['flag','plane','home','car','book','heart','gift','phone','shield','jar','award','game','bag','pet','users','trend'];
 const MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 const MON = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
@@ -678,6 +689,51 @@ const SYS_CATS = {
   __trf:{ id:'__trf', name:'Transfer', icon:'swap', color:'#0EA5E9' }
 };
 const NONREPORT = ['__adj', '__val', '__debt'];
+// "Bersama siapa": konteks transaksi (sendiri / pasangan / teman / keluarga / kerja), ikut terdeteksi dari catatan.
+const WITH = [['', 'Sendiri', 'user'], ['pacar', 'Pasangan', 'care'], ['teman', 'Teman', 'users'], ['keluarga', 'Keluarga', 'home'], ['kerja', 'Kerja', 'briefcase']];
+const WITH_RE = {
+  pacar:/\b(pacar|ayang|ayank|yayang|doi|bebeb|beb|sayang|istri|suami|pasangan|kencan|date|dating|gebetan)\b/,
+  teman:/\b(teman|temen|tmn|bestie|bestai|kawan|sohib|geng|gank|squad|circle|anak anak|bareng anak)\b/,
+  keluarga:/\b(keluarga|kluarga|family|ortu|mama|papa|mamah|papah|ibu|bapak|ayah|bunda|anak|adik|adek|kakak|nenek|kakek|mertua|ponakan|keponakan)\b/,
+  kerja:/\b(kantor|kerja|klien|client|meeting|rekan|rekan kerja|tim|team|atasan|bos|boss)\b/
+};
+const withName = k => (WITH.find(x => x[0] === (k || '')) || WITH[0])[1];
+function guessWith(note) { const n = normTxt(note); for (const k in WITH_RE) if (WITH_RE[k].test(n)) return k; return ''; }
+// Foto transaksi (struk, barang, momen): disimpan terpisah di sheet Photos, diambil saat dibuka.
+const PHOTOS = {};
+function pickPhoto() {
+  return new Promise(res => {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/' + '*';
+    inp.onchange = () => {
+      const file = inp.files && inp.files[0]; if (!file) return res(null);
+      const url = URL.createObjectURL(file), img = new Image();
+      img.onload = () => {
+        const k = Math.min(1, 900 / Math.max(img.width, img.height)), cv = document.createElement('canvas');
+        cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+        const x = cv.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, cv.width, cv.height); x.drawImage(img, 0, 0, cv.width, cv.height);
+        URL.revokeObjectURL(url);
+        res(cv.toDataURL('image/jpeg', .62));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); toast('Foto tidak bisa dibaca', true); res(null); };
+      img.src = url;
+    };
+    inp.click();
+  });
+}
+async function viewPhoto(id, data) {
+  const el = document.createElement('div');
+  el.className = 'alert-layer show photo-view';
+  el.innerHTML = '<div class="spin"></div>';
+  el.onclick = () => el.remove();
+  document.body.appendChild(el);
+  try {
+    const src = data || PHOTOS[id] || (PHOTOS[id] = await api('getPhoto', id));
+    if (!src) throw new Error('Foto tidak ditemukan');
+    el.innerHTML = `<img src="${src}" alt="">`;
+  } catch (e) { el.remove(); toast(e.message || 'Gagal memuat foto', true); }
+}
+function fmtStamp(iso) { const d = new Date(iso); return isNaN(d) ? '' : `${dateShort(isoDate(d))} ${pad(d.getHours())}.${pad(d.getMinutes())}`; }
 const FREQ = { daily:'Harian', weekly:'Mingguan', monthly:'Bulanan', yearly:'Tahunan' };
 const PERIODS = [['day', 'Hari'], ['week', 'Minggu'], ['month', 'Bulan'], ['year', 'Tahun'], ['all', 'Semua']];
 const MENU = [
@@ -768,7 +824,7 @@ function setData(d) {
   D.logos.forEach(l => LOGOS['u_' + l.id] = l.data);
   D.settings = D.settings || {};
   D.wallets.forEach(w => { w.initial = +w.initial || 0; w.order = +w.order || 0; w.limit = +w.limit || 0; w.sub = w.sub || ''; });
-  D.transactions.forEach(t => { t.amount = +t.amount || 0; t.fee = +t.fee || 0; t.refId = t.refId || ''; });
+  D.transactions.forEach(t => { t.amount = +t.amount || 0; t.fee = +t.fee || 0; t.refId = t.refId || ''; t.with = t.with || ''; t.photo = t.photo || ''; });
   D.budgets.forEach(b => b.amount = +b.amount || 0);
   D.debts.forEach(x => x.amount = +x.amount || 0);
   D.recurring.forEach(r => { r.amount = +r.amount || 0; r.auto = r.auto === true || r.auto === 'true'; r.active = r.active !== false && r.active !== 'false'; });
@@ -933,7 +989,7 @@ function txRow(t, o = {}) {
     if (o.wallet) { const out = t.walletId === o.wallet; amt = money(out ? -(t.amount + t.fee) : t.amount, true); cls = out ? 'exp' : 'inc'; }
     else { amt = money(t.amount); cls = 'trf'; }
   } else {
-    sub = `${wmini(wal(t.walletId))}<span>${esc(t.note ? c.name + ' · ' + nm(wal(t.walletId)) : nm(wal(t.walletId)))}</span>`;
+    sub = `${wmini(wal(t.walletId))}<span>${esc((t.note ? c.name + ' · ' : '') + nm(wal(t.walletId)) + (t.with ? ' · ' + withName(t.with) : ''))}</span>${t.photo ? ic('camera', 13) : ''}`;
     amt = money(t.type === 'income' ? t.amount : -t.amount, true); cls = t.type === 'income' ? 'inc' : 'exp';
     if (isSys(t)) cls = 'trf';
   }
@@ -1031,8 +1087,17 @@ function vStats() {
   <div class="sec"><h3>${S.sp === 'year' ? 'Ringkasan Bulanan' : 'Ringkasan Harian'}</h3></div>
   <div class="card pad">${periodBars(r, T)}</div>
   <div class="strip mt"><div><small>Pemasukan</small><b class="inc">${money(st.inc)}</b></div><div><small>Pengeluaran</small><b class="exp">${money(st.exp)}</b></div><div><small>Selisih</small><b>${money(st.net, true)}</b></div></div>
+  ${T === 'expense' ? withStats(L) : ''}
   ${T === 'expense' && gtot ? `<div class="sec"><h3>Komposisi</h3></div><div class="card pad"><div class="gstack">${groups.filter(g => g.v).map(g => `<i style="width:${g.v / gtot * 100}%;background:${g.c}"></i>`).join('')}</div>
     <div class="glegend">${groups.map(g => `<span><i style="background:${g.c}"></i>${g.l}<b>${Math.round(g.v / gtot * 100)}%</b></span>`).join('')}</div></div>` : ''}`;
+}
+function withStats(L) {
+  const m = {}; let tot = 0;
+  L.forEach(t => { if (t.type !== 'expense' || isSys(t)) return; m[t.with || ''] = (m[t.with || ''] || 0) + t.amount; tot += t.amount; });
+  if (!tot || Object.keys(m).length < 2 && m['']) return '';
+  const C = { '':'#64748B', pacar:'#EC4899', teman:'#F59E0B', keluarga:'#22C55E', kerja:'#3B82F6' };
+  return `<div class="sec"><h3>Bersama Siapa</h3></div><div class="stack">${WITH.filter(([k]) => m[k]).sort((a, b) => m[b[0]] - m[a[0]]).map(([k, l, i]) => `<div class="crow">${itile(i, C[k], 'sm')}
+    <span class="nm">${l}</span><span class="prog"><i style="width:${Math.max(m[k] / tot * 100, 2)}%;background:${C[k]}"></i></span><span class="pct" style="width:auto;min-width:42px">${S.hide ? Math.round(m[k] / tot * 100) + '%' : short(m[k])}</span></div>`).join('')}</div>`;
 }
 function periodBars(r, T) {
   const val = t => isSys(t) ? 0 : t.type === T ? t.amount : (T === 'expense' && t.type === 'transfer' ? t.fee : 0);
@@ -1556,10 +1621,16 @@ const SMART = [
   ['expense', 'gift', /sedekah|hadiah|donasi|amal|sosial/, 'sedekah|sodaqoh|shodaqoh|infaq|infak|zakat|zakat fitrah|zakat mal|fidyah|wakaf|qurban|kurban|donasi|donate|amal|sumbangan|nyumbang|kitabisa|kitabisa com|benihbaik|dompet dhuafa|baznas|rumah zakat|panti asuhan|anak yatim|yatim|masjid|kotak amal|kolekte|persembahan|perpuluhan|dana punia|kado|hadiah|gift|bingkisan|parcel|hampers|angpao|angpau|amplop|salam tempel|kondangan|nikahan|resepsi|undangan|sumbangan nikah|takziah|melayat|duka|uang duka|ulang tahun|ultah|birthday|traktir ultah|patungan|kado ultah|arisan'],
   ['expense', 'dots', /lain/, 'lain lain|lainnya|misc|dll|biaya lain|keperluan|keperluan lain|tak terduga|darurat'],
   ['expense', 'pet', /hewan|pet|peliharaan/, 'kucing|anjing|pet|peliharaan|makanan kucing|whiskas|royal canin|me o|pasir kucing|vet|dokter hewan|grooming|pet shop|petshop|ikan hias|burung|pakan', 1],
-  ['expense', 'coffee', /kopi|coffee|cafe/, 'ngopi|kopi|coffee|cafe|kafe', 1],
+  ['expense', 'coffee', /kopi|coffee|cafe|jajan/, 'ngopi|kopi|coffee|cafe|kafe|coffee shop|latte|cappuccino|americano|espresso|matcha|kopi susu|kopsus|es kopi|starbucks|sbux|janji jiwa|kopi kenangan|kopken|fore|tomoro|point coffee|kopi tuku|tuku|flash coffee|excelso|jajan|jajanan|snack|cemilan|camilan|ciki|boba|bubble tea|thai tea|milk tea|chatime|mixue|haus|gong cha|es teh|martabak|terang bulan|gorengan|donat|donut|roti bakar|es krim|eskrim|ice cream', 1],
   ['expense', 'fuel', /bensin|bbm|fuel/, 'bensin|bbm|pertalite|pertamax|solar|spbu', 1],
   ['expense', 'plane', /travel|liburan|perjalanan|wisata/, 'liburan|travel|tiket pesawat|pesawat|hotel|wisata|traveloka', 1],
   ['expense', 'game', /game|gaming/, 'game|top up game|diamond|mlbb|steam', 1],
+  ['expense', 'shirt', /fashion|pakaian|baju/, 'fashion|baju|kaos|kemeja|blouse|celana|jeans|rok|dress|gamis|hijab|jilbab|kerudung|jaket|hoodie|sweater|cardigan|pakaian|outfit|sepatu|sneakers|sendal|sandal|heels|kaos kaki|tas|ikat pinggang|topi|jam tangan|aksesoris|uniqlo|h&m|zara|erigo|eiger|nike|adidas|puma|converse|vans|skechers|cotton on|thrift|thrifting|jahit|penjahit|vermak|batik|seragam', 1],
+  ['expense', 'scissors', /perawatan|salon|cukur|kecantikan|beauty|grooming/, 'cukur|cukuran|pangkas|pangkas rambut|potong rambut|barbershop|barber|tukang cukur|salon|creambath|smoothing|rebonding|cat rambut|catok|spa|facial|totok wajah|massage|lulur|waxing|nail|nail art|kutek|manicure|pedicure|skincare|skin care|serum|toner|sunscreen|sunblock|moisturizer|facial wash|sabun muka|makeup|make up|lipstik|lipstick|bedak|foundation|parfum|perfume|deodoran|pomade|minyak rambut|sephora|sociolla|wardah|somethinc|scarlett|ms glow|klinik kecantikan|erha|eyelash|sulam alis|bulu mata|retouch|perawatan', 1],
+  ['expense', 'ball', /olahraga|hobi|sport/, 'gym|fitness|membership gym|futsal|badminton|bulutangkis|renang|kolam renang|sewa lapangan|lapangan|padel|tenis|golf|olahraga|yoga|pilates|zumba|lari|marathon|fun run|sepeda|gowes|mancing|camping|hiking|naik gunung|hobi|jersey|raket|shuttlecock|kok|bola|basket', 1],
+  ['expense', 'phone', /gadget|elektronik/, 'gadget|hp|handphone|smartphone|iphone|samsung|xiaomi|oppo|laptop|komputer|pc|tablet|ipad|earphone|earbuds|headset|headphone|tws|charger|kabel data|powerbank|power bank|casing|case hp|tempered glass|mouse|keyboard|monitor|flashdisk|memory card|electronic city|erafone|ibox|digimap|servis hp|service hp|ganti lcd|elektronik', 1],
+  ['expense', 'receipt', /admin|biaya bank/, 'biaya admin bank|biaya admin|admin bank|biaya transfer|biaya bank|potongan admin|materai|administrasi|biaya layanan|service fee|admin|bunga bank|denda bank|biaya kartu|iuran kartu|annual fee', 1],
+  ['income', 'tag', /penjualan|jual/, 'jual|jualan|terjual|laku|penjualan|jual barang|jual hp|jual motor|preloved|barang bekas', 1],
   ['income', 'briefcase', /gaji|salary|upah/, 'gaji|gajian|salary|payroll|upah|honor|honorarium|uang lembur|lembur|overtime|fee kerja|insentif kerja|gaji pokok|gaji bulanan|transfer gaji|terima gaji|uang makan kantor|tunjangan|thr|tunjangan hari raya'],
   ['income', 'award', /bonus|komisi|insentif/, 'bonus|insentif|komisi|reward|apresiasi|bonus tahunan|bonus kinerja|jasa produksi|jaspro|cashback|poin|voucher|hadiah lomba|juara|menang lomba'],
   ['income', 'store', /usaha|bisnis|jualan|dagang/, 'jualan|penjualan|jual|terjual|laku|omzet|omset|usaha|bisnis|dagang|dagangan|toko|warung saya|orderan|order masuk|pesanan|customer|pelanggan|client|klien|project|proyek|freelance|freelancer|side job|sampingan|kerja sampingan|endorse|endorsement|affiliate|afiliasi|komisi affiliate|adsense|youtube|monetisasi|jasa|fee jasa|desain|design|ngajar|les privat ngajar|ojol narik|narik|tarikan|setoran|dp masuk|pelunasan masuk|invoice|tagihan klien'],
@@ -1569,7 +1640,7 @@ const SMART = [
 ].map(([type, icon, name, kw, spec]) => ({ type, icon, name, spec:!!spec, words:kw.split('|') }));
 const EXPENSE_HINT = /\b(bayar|byr|beli|bli|belanja|keluar|kirim|isi|top up|topup|langganan|cicil|nyumbang|traktir)\b/;
 const INCOME_HINT = /\b(gaji|gajian|salary|bonus|thr|insentif|komisi|dividen|deviden|omzet|omset|jualan|penjualan|terima|diterima|dapat|dapet|dikasih|refund|cashback|pemasukan|cair|untung|profit|freelance|honor)\b/;
-const STOP = new Set('di ke dari untuk buat utk dan yg yang sama beli bayar isi the of to for and ya aja lagi nya pak bu mas mbak kak rp idr ini itu tadi td hari pagi siang sore malam kemarin besok sm dgn dengan buat bwt'.split(' '));
+const STOP = new Set('di ke dari untuk buat utk dan yg yang sama beli bayar isi the of to for and ya aja lagi nya pak bu mas mbak kak rp idr ini itu tadi td hari pagi siang sore malam kemarin besok sm dgn dengan buat bwt bareng bulanan mingguan harian tahunan rutin bulan minggu tahun biaya bank uang total baru lama'.split(' '));
 const AMT_RE = /(?:^|\s)(?:rp\.?\s*)?(\d{1,3}(?:[.,]\d{3})+|\d+(?:[.,]\d+)?)\s*(rb|ribu|rbu|k|jt|juta|jeti)?(?=\s|$)/i;
 
 // "kopi 25rb" → 25000, "1,5jt" → 1500000, "25.000" → 25000. Angka kecil tanpa satuan diabaikan (mis. "2 porsi").
@@ -1620,7 +1691,8 @@ function smartGuess(text, type, canSwitch) {
     if (L.exact[t + '|' + n]) consider(100 * w, L.exact[t + '|' + n], t, 'riwayat');
     const tally = {};
     n.split(' ').forEach(word => { const m = L.tok[t + '|' + word]; if (m) Object.entries(m).forEach(([c, k]) => tally[c] = (tally[c] || 0) + Math.min(k, 8)); });
-    Object.entries(tally).forEach(([c, k]) => consider((10 + k * 3) * w, c, t, 'riwayat'));
+    // satu kata yang pernah dipakai: sinyal sedang (maks 18), kalah dari frasa kamus yang spesifik
+    Object.entries(tally).forEach(([c, k]) => consider((8 + Math.min(k, 5) * 2) * w, c, t, 'riwayat'));
   });
   SMART.forEach(r => {
     if (!types.includes(r.type)) return;
@@ -1654,7 +1726,7 @@ function openTxForm(t, preset = {}) {
   if (f.toWalletId === f.walletId) f.toWalletId = '';
   const sys = isSys(f) ? cat(f.categoryId) : null;
   // status pintar: kategori/jenis/nominal yang sudah disentuh manual tidak ditimpa tebakan
-  const st = { catManual:edit || !!f.categoryId, typeManual:edit || !!preset.recur || !!sys || !!preset.walletId || !!preset.toWalletId, amtManual:edit || !!f.amount, why:'', parsed:null, all:false };
+  const st = { catManual:edit || !!f.categoryId, typeManual:edit || !!preset.recur || !!sys || !!preset.walletId || !!preset.toWalletId, amtManual:edit || !!f.amount, why:'', parsed:null, all:false, withManual:edit || !!f.with, photoData:'', photoDrop:false };
   const el = openSheet({ title:edit ? 'Detail Transaksi' : preset.recur ? 'Bayar Tagihan' : 'Transaksi Baru', right:'Simpan', onRight:save });
   const $b = s => el.body.querySelector(s);
 
@@ -1666,6 +1738,7 @@ function openTxForm(t, preset = {}) {
     <div class="shint" id="f-hint"></div>
     <div id="f-cats"></div>
     <div class="metas" id="f-detail"></div>
+    ${edit ? `<p class="hint" style="text-align:center">Dicatat ${fmtStamp(f.createdAt) || dateShort(f.date)}${f.updatedAt && f.updatedAt.slice(0, 16) !== String(f.createdAt).slice(0, 16) && fmtStamp(f.updatedAt) ? ' · diubah ' + fmtStamp(f.updatedAt) : ''}</p>` : ''}
     ${edit ? `<div class="btns">${sys ? '<span></span>' : `<button class="btn" data-f="dup">${ic('copy', 17)}Duplikat</button>`}<button class="btn danger" data-f="del">${ic('trash', 17)}Hapus</button></div>` : ''}`;
     const note = $b('#f-note'), amt = $b('#f-amt');
     note.oninput = () => { f.note = note.value; think(); };
@@ -1701,11 +1774,15 @@ function openTxForm(t, preset = {}) {
     $b('#f-detail').innerHTML = `<label class="meta">${w ? wicon(w, 'mn') : ic('wallet', 16)}<span>${esc(w ? w.name : 'Pilih akun')}</span>${ic('chevR', 13)}<select id="f-w">${walletOptions(f.walletId)}</select></label>
       ${T === 'transfer' ? `<label class="meta">${ic('arrowOut', 14)}<span>${esc(to ? to.name : 'Ke akun…')}</span>${ic('chevR', 13)}<select id="f-to"><option value="">Pilih akun</option>${walletOptions(f.toWalletId, f.walletId)}</select></label>
         <label class="meta fee"><span>Biaya</span><input id="f-fee" inputmode="numeric" placeholder="0" value="${fmtNum(f.fee)}"></label>` : ''}
-      <label class="meta">${ic('calendar', 15)}<span>${dateLong(f.date)}</span><input id="f-date" type="date" value="${f.date}"></label>`;
+      <label class="meta">${ic('calendar', 15)}<span>${dateLong(f.date)}</span><input id="f-date" type="date" value="${f.date}"></label>
+      ${T !== 'transfer' ? `<label class="meta ${f.with ? 'hl' : ''}">${ic((WITH.find(x => x[0] === f.with) || WITH[0])[2], 15)}<span>${withName(f.with)}</span>${ic('chevR', 13)}<select id="f-with">${WITH.map(([k, l]) => `<option value="${k}" ${f.with === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>` : ''}
+      ${st.photoData || (f.photo && !st.photoDrop) ? `<span class="meta ph"><button data-f="viewph">${st.photoData ? `<img src="${st.photoData}" alt="">` : ic('camera', 15)}<span>Foto</span></button><button data-f="rmph" aria-label="Hapus foto">${ic('x', 14, 'b')}</button></span>`
+        : `<button class="meta" data-f="photo">${ic('camera', 15)}<span>Foto</span></button>`}`;
     $b('#f-w').onchange = e => { f.walletId = e.target.value; if (f.toWalletId === f.walletId) f.toWalletId = ''; drawDetail(); };
     const toSel = $b('#f-to'); if (toSel) toSel.onchange = e => { f.toWalletId = e.target.value; drawDetail(); };
     const fee = $b('#f-fee'); if (fee) fee.oninput = () => { f.fee = digits(fee.value); fee.value = fmtNum(f.fee); };
     $b('#f-date').onchange = e => { f.date = e.target.value || today(); drawDetail(); };
+    const ws = $b('#f-with'); if (ws) ws.onchange = e => { f.with = e.target.value; st.withManual = true; drawDetail(); };
   }
   function drawHint() {
     const h = $b('#f-hint'), c = D.categories.find(x => x.id === f.categoryId);
@@ -1730,6 +1807,7 @@ function openTxForm(t, preset = {}) {
       if (f.type !== before) drawType();
       drawCats();
     }
+    if (!st.withManual && f.type !== 'transfer') { const w = guessWith(f.note); if (w !== f.with) { f.with = w; drawDetail(); } }
     drawHint();
   }
   el.body.addEventListener('click', async e => {
@@ -1744,9 +1822,12 @@ function openTxForm(t, preset = {}) {
     }
     else if (k === 'cat') { f.categoryId = b.dataset.v; st.catManual = true; st.why = ''; el.body.querySelectorAll('[data-f=cat]').forEach(x => x.classList.toggle('on', x === b)); drawHint(); }
     else if (k === 'all') { st.all = !st.all; drawCats(); }
+    else if (k === 'photo') pickPhoto().then(d => { if (d) { st.photoData = d; drawDetail(); } });
+    else if (k === 'viewph') viewPhoto(f.photo, st.photoData);
+    else if (k === 'rmph') { st.photoData = ''; st.photoDrop = true; drawDetail(); }
     else if (k === 'newcat') openCatForm(null, f.type, c => { f.categoryId = c.id; st.catManual = true; st.why = ''; drawCats(); drawHint(); });
     else if (k === 'dup') {
-      const n = Object.assign({}, f, { id:uid(), date:today(), createdAt:new Date().toISOString() });
+      const n = Object.assign({}, f, { id:uid(), date:today(), createdAt:new Date().toISOString(), photo:'' });
       closeSheet(el); persist([['saveTx', n]], () => D.transactions.push(n), 'Transaksi diduplikat');
     }
     else if (k === 'del') {
@@ -1770,6 +1851,12 @@ function openTxForm(t, preset = {}) {
     f.updatedAt = new Date().toISOString();
     if (wGroup(wal(f.walletId)) === 'liquid') ls('lastWallet', f.walletId);
     const o = Object.assign({}, f), calls = [['saveTx', o]];
+    if (f.type === 'transfer') o.with = '';
+    // foto: unggah dulu (transaksi menyimpan id-nya); foto lama dihapus bila diganti/dibuang
+    const oldPhoto = t && t.photo;
+    if (st.photoData) { o.photo = uid(); PHOTOS[o.photo] = st.photoData; calls.unshift(['savePhoto', { id:o.photo, data:st.photoData }]); }
+    else if (st.photoDrop) o.photo = '';
+    if (oldPhoto && oldPhoto !== o.photo) calls.push(['deletePhoto', oldPhoto]);
     let r2 = null;
     if (preset.recur) { r2 = Object.assign({}, preset.recur, { next:addFreq(preset.recur.next, preset.recur.freq, anchorOf(preset.recur)) }); calls.push(['saveRecurring', r2]); }
     closeSheet(el);
@@ -2360,7 +2447,7 @@ document.addEventListener('visibilitychange', () => {
 /* ========================= Mock (preview tanpa Apps Script) ========================= */
 const Mock = (() => {
   const K = 'dk_mock_db_v4';
-  const DEF = [['expense','Makan & Minum','food','#F59E0B','need'],['expense','Transportasi','car','#0EA5E9','need'],['expense','Tagihan & Utilitas','zap','#EAB308','need'],['expense','Pulsa & Internet','wifi','#A855F7','need'],['expense','Kesehatan','heart','#14B8A6','need'],['expense','Pendidikan','book','#6366F1','need'],['expense','Rumah Tangga','home','#84CC16','need'],['expense','Belanja','bag','#EC4899','want'],['expense','Hiburan','film','#EF4444','want'],['expense','Cicilan & Kredit','card','#F97316','oblig'],['expense','Asuransi & Pajak','shield','#06B6D4','oblig'],['expense','Keluarga','users','#64748B','social'],['expense','Sedekah & Hadiah','gift','#22C55E','social'],['expense','Lainnya','dots','#8C8F99','other'],['income','Gaji','briefcase','#22C55E','other'],['income','Bonus','award','#F59E0B','other'],['income','Usaha','store','#0EA5E9','other'],['income','Hasil Investasi','trend','#A855F7','other'],['income','Hadiah','gift','#EC4899','other'],['income','Lainnya','coins','#64748B','other']];
+  const DEF = [['expense','Makan & Minum','food','#F59E0B','need'],['expense','Transportasi','car','#0EA5E9','need'],['expense','Tagihan & Utilitas','zap','#EAB308','need'],['expense','Pulsa & Internet','wifi','#A855F7','need'],['expense','Kesehatan','heart','#14B8A6','need'],['expense','Pendidikan','book','#6366F1','need'],['expense','Rumah Tangga','home','#84CC16','need'],['expense','Belanja','bag','#EC4899','want'],['expense','Hiburan','film','#EF4444','want'],['expense','Cicilan & Kredit','card','#F97316','oblig'],['expense','Asuransi & Pajak','shield','#06B6D4','oblig'],['expense','Keluarga','users','#64748B','social'],['expense','Sedekah & Hadiah','gift','#22C55E','social'],['expense','Lainnya','dots','#8C8F99','other'],['income','Gaji','briefcase','#22C55E','other'],['income','Bonus','award','#F59E0B','other'],['income','Usaha','store','#0EA5E9','other'],['income','Hasil Investasi','trend','#A855F7','other'],['income','Hadiah','gift','#EC4899','other'],['income','Lainnya','coins','#64748B','other'],['expense','Fashion','shirt','#06B6D4','want'],['expense','Perawatan Diri','scissors','#D946EF','want'],['expense','Kopi & Jajan','coffee','#B45309','want'],['expense','Olahraga & Hobi','ball','#22C55E','want'],['expense','Liburan & Travel','plane','#0EA5E9','want'],['expense','Gadget & Elektronik','phone','#6366F1','want'],['expense','Hewan Peliharaan','pet','#F59E0B','want'],['expense','Bensin','fuel','#EF4444','need'],['expense','Biaya Admin & Bank','receipt','#64748B','oblig'],['income','Penjualan','tag','#22C55E','other']];
   function demo() {
     const categories = DEF.map((c, i) => ({ id:'c' + i, name:c[1], type:c[0], icon:c[2], color:c[3], order:i, group:c[4] }));
     const now = new Date().toISOString();
@@ -2423,6 +2510,9 @@ const Mock = (() => {
   }
   let db; try { db = JSON.parse(localStorage.getItem(K)); } catch (e) { db = null; }
   if (!db) db = demo();
+  // data demo lama: tambahkan kategori yang belum ada
+  DEF.forEach((c, i) => { if (!db.categories.some(x => x.type === c[0] && x.name === c[1])) db.categories.push({ id:'c' + i, name:c[1], type:c[0], icon:c[2], color:c[3], order:i, group:c[4] }); });
+  db.photos = db.photos || {};
   const save = () => { try { localStorage.setItem(K, JSON.stringify(db)); } catch (e) {} };
   const up = (arr, o) => { const i = arr.findIndex(x => x.id === o.id); if (i >= 0) arr[i] = o; else arr.push(o); return o; };
   const all = () => JSON.parse(JSON.stringify({ wallets:db.wallets, categories:db.categories, transactions:db.transactions, budgets:db.budgets, debts:db.debts,
@@ -2456,7 +2546,10 @@ const Mock = (() => {
     deleteGoal:id => { db.goals = db.goals.filter(x => x.id !== id); return true; },
     saveSetting:(k, v) => { db.settings[k] = v; return true; },
     saveLogo:l => { db.logos = db.logos || []; up(db.logos, l); return { id:l.id }; },
-    deleteLogo:id => { db.logos = (db.logos || []).filter(x => x.id !== id); return true; }
+    deleteLogo:id => { db.logos = (db.logos || []).filter(x => x.id !== id); return true; },
+    savePhoto:ph => { db.photos[ph.id] = ph.data; return { id:ph.id }; },
+    getPhoto:id => db.photos[id] || '',
+    deletePhoto:id => { delete db.photos[id]; return true; }
   };
   return { call:(fn, args) => new Promise((res, rej) => setTimeout(() => { try { const r = F[fn](...JSON.parse(JSON.stringify(args))); save(); res(r); } catch (e) { rej(e); } }, 150)) };
 })();
