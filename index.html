@@ -105,6 +105,9 @@ b,.num{font-variant-numeric:tabular-nums}
 .hside{width:40px;display:flex;justify-content:center;flex-shrink:0}
 .hbtn{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--text);background:var(--card)}
 .hbtn.plain{background:none}
+.hd.w2 .hside{width:84px;gap:4px}
+.hd.w2 .hside:first-child{justify-content:flex-start}
+.hd.w2 .hside:last-child{justify-content:flex-end}
 .hbtn.spinning .i{animation:rot .8s linear infinite}
 .greet{flex:1;min-width:0}
 .greet small{display:block;font-size:12.5px;color:var(--sub)}
@@ -1519,9 +1522,9 @@ function header(v) {
   }
   const right = { wallets:`<button class="hbtn plain" data-act="addWallet" aria-label="Tambah akun">${ic('plus', 24)}</button>`,
     profile:`<button class="hbtn plain" data-act="eye" aria-label="Sembunyikan nominal">${ic(S.hide ? 'eyeOff' : 'eye', 21)}</button>`,
-    tx:`<button class="hbtn plain" data-act="quick" data-id="expense" aria-label="Tambah">${ic('plus', 24)}</button>` }[v] || '';
+    tx:`<button class="hbtn plain" data-act="txCal" aria-label="Kalender">${ic('calendar', 22)}</button><button class="hbtn plain" data-act="quick" data-id="expense" aria-label="Tambah">${ic('plus', 24)}</button>` }[v] || '';
   const left = MAIN.includes(v) ? '' : `<button class="hbtn" data-act="back" aria-label="Kembali">${ic('chevL', 20, 'b')}</button>`;
-  return `<div class="hd"><span class="hside">${left}</span><h1>${TITLES[v]}</h1><span class="hside">${right}</span></div>`;
+  return `<div class="hd${v === 'tx' ? ' w2' : ''}"><span class="hside">${left}</span><h1>${TITLES[v]}</h1><span class="hside">${right}</span></div>`;
 }
 function render() {
   const v = S.tab;
@@ -1581,6 +1584,7 @@ const ACT = {
   debt: id => openDebt(id),
   addDebt: () => openDebtForm(null, S.debtTab),
   recTab: id => { S.recTab = id; render(); },
+  txCal: () => { S.recTab = 'cal'; S.calM = thisMonth(); S.calDay = ''; go('recur'); },
   calDay: id => { S.calDay = S.calDay === id ? '' : id; render(); },
   calMove: id => { S.calM = shiftMonth(S.calM, +id); S.calDay = ''; render(); },
   calAddTx: () => openTxForm(null, S.calDay && S.calDay <= today() ? { date:S.calDay } : {}),
