@@ -362,11 +362,18 @@ b,.num{font-variant-numeric:tabular-nums}
 .meta select,.meta input[type=date]{position:absolute;inset:0;opacity:0;width:100%;height:100%;font-size:16px}
 .meta.fee input{width:76px;border:0;background:none;outline:0;color:var(--text);font-size:16px;padding:0}
 .meta.fee span{color:var(--sub)}
-.irow{display:flex;align-items:center;gap:11px;background:var(--card);border-radius:16px;padding:11px 13px}
+.irow{display:flex;align-items:center;gap:11px;background:var(--card);border-radius:16px;padding:11px 13px;width:100%;text-align:left;color:var(--text)}
+.irow>.i{color:var(--sub);flex-shrink:0}
 .irow>span{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .irow b{font-size:14px;font-weight:600}
 .irow small{font-size:12px;color:var(--sub)}
 .irow em{font-style:normal;font-weight:600;font-size:14px;white-space:nowrap}
+.ih{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.ih:last-child{border-bottom:0}
+.ih span{flex:1;display:flex;flex-direction:column;gap:1px;min-width:0}
+.ih b{font-size:14px;font-weight:500}
+.ih small{font-size:12px;color:var(--sub)}
+.ih em{font-style:normal;font-weight:600;font-size:14px;font-variant-numeric:tabular-nums}
 .ibox{margin:8px 6px 0;font-size:12.5px;color:var(--sub);line-height:1.5}
 .ibox b{color:var(--text);font-weight:600}
 .ibox .btn{margin-top:8px;height:40px;font-size:14px}
@@ -721,15 +728,24 @@ const SYS_CATS = {
   __trf:{ id:'__trf', name:'Transfer', icon:'swap', color:'#0EA5E9' },
   __int:{ id:'__int', name:'Bunga Bank', icon:'coins', color:'#22C55E', group:'other' }
 };
-// Bunga harian rekening bank/tabungan (sama dengan perhitungan di server).
-const INT_TYPES = ['bank', 'saving'], INT_TAX = .2, INT_TAX_MIN = 7500000;
-const dailyInterest = (bal, bp, tax) => bal <= 0 || bp <= 0 ? 0 : Math.round(bal * bp / 10000 / 365 * (tax && bal > INT_TAX_MIN ? 1 - INT_TAX : 1));
-// Kebalikannya: perkiraan saldo dari bunga yang diterima per hari.
-function balFromInterest(daily, bp, tax) {
-  if (!daily || !bp) return 0;
-  const gross = daily * 365 * 10000 / bp, taxed = gross / (1 - INT_TAX);
-  return Math.round(tax && taxed > INT_TAX_MIN ? taxed : gross);
+// Bunga harian rekening bank/tabungan (sama dengan perhitungan di server, Code.gs: dailyInterest_).
+// rateBp = bunga kotor % p.a. x 100, taxBp = pajak % dari bunga kotor x 100, taxMin = pajak hanya bila saldo di atas ini.
+const INT_TYPES = ['bank', 'saving'], TAX_MIN_DEF = 7500000;
+const isInt = t => t.categoryId === '__int';
+function dailyInterest(bal, w) {
+  if (bal <= 0 || !(w.rateBp > 0)) return { gross:0, tax:0, net:0 };
+  const gross = Math.round(bal * w.rateBp / 10000 / 365);
+  const tax = w.taxBp > 0 && bal > (w.taxMin || 0) ? Math.round(gross * w.taxBp / 10000) : 0;
+  return { gross, tax, net:gross - tax };
 }
+// Kebalikannya: perkiraan saldo dari bunga bersih yang diterima per hari.
+function balFromInterest(daily, w) {
+  if (!daily || !(w.rateBp > 0)) return 0;
+  const plain = daily * 365 * 10000 / w.rateBp, taxed = plain / (1 - (w.taxBp || 0) / 10000);
+  return Math.round(w.taxBp > 0 && taxed > (w.taxMin || 0) ? taxed : plain);
+}
+const pctVal = bp => bp ? String(bp / 100).replace('.', ',') : '';
+const parsePct = v => { const n = parseFloat(String(v).replace(',', '.')); return isFinite(n) ? Math.max(0, Math.round(n * 100)) : 0; };
 const rateTxt = bp => (bp / 100).toLocaleString('id-ID', { maximumFractionDigits:2 }) + '%';
 const NONREPORT = ['__adj', '__val', '__debt'];
 // "Bersama siapa": konteks transaksi (sendiri / pasangan / teman / keluarga / kerja), ikut terdeteksi dari catatan.
@@ -862,6 +878,7 @@ const S = {
 };
 let D = {};
 
+function fixWallet(w) { if (w.rateTax && !w.taxBp) { w.taxBp = 2000; w.taxMin = TAX_MIN_DEF; } return w; }
 function setData(d) {
   D = Object.assign({ wallets:[], categories:[], transactions:[], budgets:[], debts:[], recurring:[], goals:[], logos:[], settings:{}, hasPin:false, dbUrl:'' }, d);
   D.logos.forEach(l => LOGOS['u_' + l.id] = l.data);
@@ -1083,7 +1100,7 @@ function vHome() {
   const total = liq.reduce((s, w) => s + (bal[w.id] || 0), 0);
   const L = S.period === 'all' ? D.transactions : inRange(D.transactions, r), st = sumStats(L);
   const bills = upcomingBills(7), ins = insights();
-  const recent = sortTx(L).slice(0, 15);
+  const recent = sortTx(L.filter(t => !isInt(t))).slice(0, 15);
   return `
   <div class="periods">${PERIODS.map(([k, l]) => `<button class="${S.period === k ? 'on' : ''}" data-act="period" data-id="${k}">${l}</button>`).join('')}</div>
   <section class="hero">
@@ -1414,7 +1431,7 @@ function vCal() {
   }
   const sm = n => n >= 1e7 ? 'Rp' + short(n) : money(n);
   const unpaid = ev.filter(e => e.st !== 'paid' && e.r.type !== 'income').reduce((s, e) => s + e.r.amount, 0);
-  const day = S.calDay, bills = day ? byDay[day] || [] : ev, dtx = day ? txs.filter(t => t.date === day) : txs;
+  const day = S.calDay, bills = day ? byDay[day] || [] : ev, dtx = (day ? txs.filter(t => t.date === day) : txs).filter(t => !isInt(t));
   const dx = day && txDay[day], dnet = dx ? dx.inc - dx.exp : 0;
   return `${recTabs()}
   <div class="pnav"><button data-act="calMove" data-id="-1">${ic('chevL', 20, 'b')}</button><b>${monthName(m)}</b><button data-act="calMove" data-id="1">${ic('chevR', 20, 'b')}</button></div>
@@ -1490,7 +1507,10 @@ function drawTxList() {
   const L = filteredTx(), st = sumStats(L);
   let h = `<div class="strip"><div><small>Masuk</small><b class="inc">${money(st.inc)}</b></div><div><small>Keluar</small><b class="exp">${money(st.exp)}</b></div><div><small>Selisih</small><b>${money(st.net, true)}</b></div></div>`;
   if (S.f.q) h += `<p class="hint">${L.length} hasil dari semua bulan</p>`;
-  h += L.length ? groupedTx(L.slice(0, 400), { wallet:S.f.wallet }) : `<div class="mt">${empty('receipt', 'Tidak ada transaksi', S.f.q ? 'Coba kata kunci lain' : 'Belum ada catatan di periode ini')}</div>`;
+  // bunga harian tidak ditampilkan di riwayat (lihat di detail akun), tetapi tetap ikut total
+  const iL = L.filter(isInt), V = S.f.cat === '__int' ? L : L.filter(t => !isInt(t));
+  if (iL.length && V !== L) h += `<p class="hint">Termasuk bunga bank ${money(iL.reduce((s, t) => s + t.amount, 0))} · rinciannya di detail akun.</p>`;
+  h += V.length ? groupedTx(V.slice(0, 400), { wallet:S.f.wallet }) : `<div class="mt">${empty('receipt', 'Tidak ada transaksi', S.f.q ? 'Coba kata kunci lain' : 'Belum ada catatan di periode ini')}</div>`;
   box.innerHTML = h;
 }
 function vDebt() {
@@ -1584,6 +1604,7 @@ const ACT = {
   debt: id => openDebt(id),
   addDebt: () => openDebtForm(null, S.debtTab),
   recTab: id => { S.recTab = id; render(); },
+  intHist: id => openIntHist(id),
   txCal: () => { S.recTab = 'cal'; S.calM = thisMonth(); S.calDay = ''; go('recur'); },
   calDay: id => { S.calDay = S.calDay === id ? '' : id; render(); },
   calMove: id => { S.calM = shiftMonth(S.calM, +id); S.calDay = ''; render(); },
@@ -2102,7 +2123,7 @@ function openWallet(id) {
   el._refresh = () => {
     const w = wal(id); if (!w) return closeSheet(el);
     const g = wGroup(w), b = balances()[id] || 0;
-    const L = sortTx(D.transactions.filter(t => t.walletId === id || t.toWalletId === id));
+    const L = sortTx(D.transactions.filter(t => t.walletId === id || t.toWalletId === id)), Lv = L.filter(t => !isInt(t));
     let inc = 0, out = 0;
     L.filter(t => t.date.slice(0, 7) === thisMonth()).forEach(t => {
       if (t.type === 'income' || (t.type === 'transfer' && t.toWalletId === id)) inc += t.amount;
@@ -2126,11 +2147,12 @@ function openWallet(id) {
     </div>
     ${mid}
     <div class="strip mt">${cells.map(c => `<div><small>${c[0]}</small><b class="${c[2]}">${c[1]}</b></div>`).join('')}</div>
-    ${w.rateBp > 0 && INT_TYPES.includes(w.type) ? (() => {
-      const mInt = L.filter(t => t.categoryId === '__int' && t.walletId === id && t.date.slice(0, 7) === thisMonth()).reduce((s, t) => s + t.amount, 0);
-      return `<div class="irow mt">${itile('coins', '#22C55E', 'sm')}<span><b>Bunga ${rateTxt(w.rateBp)} p.a.${w.rateTax ? ' · pajak 20%' : ''}</b><small>≈ ${money(dailyInterest(b, w.rateBp, w.rateTax))}/hari · masuk otomatis tiap hari</small></span><em class="inc">${mInt ? '+' + money(mInt) : ''}</em></div>`;
+    ${(w.rateBp > 0 && INT_TYPES.includes(w.type)) || L.some(isInt) ? (() => {
+      const mInt = L.filter(t => isInt(t) && t.date.slice(0, 7) === thisMonth()).reduce((s, t) => s + t.amount, 0);
+      const sub = w.rateBp > 0 ? `≈ ${money(dailyInterest(b, w).net)}/hari bersih · ketuk untuk riwayat` : 'Bunga nonaktif · ketuk untuk riwayat';
+      return `<button class="irow mt" data-act="intHist" data-id="${id}">${itile('coins', '#22C55E', 'sm')}<span><b>Bunga ${w.rateBp > 0 ? rateTxt(w.rateBp) + ' p.a.' : ''}${w.taxBp > 0 ? ' · pajak ' + rateTxt(w.taxBp) : ''}</b><small>${sub}</small></span><em class="inc">${mInt ? '+' + money(mInt) : ''}</em>${ic('chevR', 16)}</button>`;
     })() : ''}
-    ${L.length ? groupedTx(L.slice(0, 150), { wallet:id }) : `<div class="mt">${empty('receipt', 'Belum ada transaksi')}</div>`}`;
+    ${Lv.length ? groupedTx(Lv.slice(0, 150), { wallet:id }) : `<div class="mt">${empty('receipt', 'Belum ada transaksi')}</div>`}`;
   };
   el._refresh();
 }
@@ -2158,8 +2180,9 @@ function openWalletForm(w, presetType) {
     </div>
     ${INT_TYPES.includes(f.type) ? `<div class="flabel">Bunga harian</div>
     <div class="group">
-      <div class="field"><label>Bunga % p.a.</label><input id="w-rate" inputmode="decimal" placeholder="mis. 3,75" value="${f.rateBp ? String(f.rateBp / 100).replace('.', ',') : ''}"></div>
-      <div class="field"><label>Potong pajak 20%</label><span style="flex:1"></span><button class="toggle ${f.rateTax ? 'on' : ''}" data-f="tax"></button></div>
+      <div class="field"><label>Bunga kotor % p.a.</label><input id="w-rate" inputmode="decimal" placeholder="mis. 3,75" value="${pctVal(f.rateBp)}"></div>
+      <div class="field"><label>Pajak % dari bunga</label><input id="w-tax" inputmode="decimal" placeholder="mis. 20" value="${pctVal(f.taxBp)}"></div>
+      ${f.taxBp > 0 ? `<div class="field"><label>Bebas pajak s.d. Rp7,5 jt</label><span style="flex:1"></span><button class="toggle ${f.taxMin ? 'on' : ''}" data-f="taxmin"></button></div>` : ''}
       <div class="field"><label>Bunga diterima/hari</label><input id="w-daily" inputmode="numeric" placeholder="opsional" value="${fmtNum(st.daily)}"></div>
     </div><div class="ibox" id="w-ibox"></div>` : ''}
     <div class="flabel">Logo</div>${logoPicker(f.logo || '', itile(wt(f).i, f.color, 'sm'))}
@@ -2175,7 +2198,9 @@ function openWalletForm(w, presetType) {
     const lim = el.body.querySelector('#w-limit'); if (lim) lim.oninput = () => { f.limit = digits(lim.value); lim.value = fmtNum(f.limit); };
     const rate = el.body.querySelector('#w-rate');
     if (rate) {
-      rate.oninput = () => { const v = parseFloat(rate.value.replace(',', '.')); f.rateBp = isFinite(v) ? Math.max(0, Math.min(5000, Math.round(v * 100))) : 0; drawInt(); };
+      rate.oninput = () => { f.rateBp = Math.min(5000, parsePct(rate.value)); drawInt(); };
+      const tax = el.body.querySelector('#w-tax');
+      tax.oninput = () => { const had = f.taxBp > 0; f.taxBp = Math.min(10000, parsePct(tax.value)); if (had !== f.taxBp > 0) { if (f.taxBp > 0) f.taxMin = TAX_MIN_DEF; draw(); const n = el.body.querySelector('#w-tax'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); } else drawInt(); };
       const dl = el.body.querySelector('#w-daily');
       dl.oninput = () => { st.daily = digits(dl.value); dl.value = fmtNum(st.daily); drawInt(); };
       init.addEventListener('input', drawInt);
@@ -2186,12 +2211,13 @@ function openWalletForm(w, presetType) {
   const drawInt = () => {
     const box = el.body.querySelector('#w-ibox'); if (!box) return;
     const bal = edit ? balances()[f.id] || 0 : f.initial, bp = f.rateBp || 0;
-    if (!bp) { box.innerHTML = 'Isi bunga dari bank (cek di aplikasi bank), lalu bunga ditambahkan otomatis ke saldo setiap hari.'; return; }
-    const d = dailyInterest(bal, bp, f.rateTax);
-    let h = `Saldo ${money(bal)} → bunga ≈ <b>${money(d)}/hari</b> · ${money(d * 30)}/bulan. Ditambahkan otomatis setiap hari${f.rateTax ? '; pajak 20% dipotong bila saldo di atas Rp7,5 jt' : ''}.`;
+    if (!bp) { box.innerHTML = 'Isi bunga kotor dari bank (cek di aplikasi bank). Bunga ditambahkan otomatis ke saldo setiap hari saat aplikasi dibuka.'; return; }
+    const d = dailyInterest(bal, f);
+    let h = `Saldo ${money(bal)} → bunga kotor ${money(d.gross)}${d.tax ? ` − pajak ${money(d.tax)}` : ''} = <b>${money(d.net)}/hari</b> (≈ ${money(d.net * 30)}/bulan). Masuk otomatis setiap hari, mulai hari ini.`;
     if (st.daily) {
-      const est = balFromInterest(st.daily, bp, f.rateTax), step = Math.round(365 * 10000 / bp / (f.rateTax && est > INT_TAX_MIN ? 1 - INT_TAX : 1) / 2);
-      h += `<br>Bunga <b>${money(st.daily)}/hari</b> di ${rateTxt(bp)} p.a. berarti saldomu ≈ <b>${money(est)}</b> (± ${money(step)}).`;
+      const est = balFromInterest(st.daily, f), taxed = f.taxBp > 0 && est > (f.taxMin || 0);
+      const step = Math.round(365 * 10000 / bp / (taxed ? 1 - f.taxBp / 10000 : 1) / 2);
+      h += `<br>Bunga bersih <b>${money(st.daily)}/hari</b> di ${rateTxt(bp)} p.a. berarti saldomu ≈ <b>${money(est)}</b> (± ${money(step)}).`;
       if (Math.abs(est - bal) > step) h += `<button class="btn" data-f="usebal">${ic('refresh', 16)}${edit ? 'Koreksi saldo ke ' : 'Pakai sebagai saldo awal '}${money(est)}</button>`;
       st.est = est;
     }
@@ -2204,7 +2230,7 @@ function openWalletForm(w, presetType) {
     if (b.dataset.f === 'logo') { f.logo = b.dataset.v; draw(); }
     if (b.dataset.f === 'upload') uploadLogo(f.name).then(k => { if (k) { f.logo = k; draw(); } });
     if (b.dataset.f === 'arch') { f.archived = !f.archived; b.classList.toggle('on', f.archived); }
-    if (b.dataset.f === 'tax') { f.rateTax = !f.rateTax; b.classList.toggle('on', f.rateTax); drawInt(); }
+    if (b.dataset.f === 'taxmin') { f.taxMin = f.taxMin ? 0 : TAX_MIN_DEF; b.classList.toggle('on', !!f.taxMin); drawInt(); }
     if (b.dataset.f === 'usebal') {
       if (!edit) { f.initial = st.est; const i = el.body.querySelector('#w-init'); if (i) i.value = fmtNum(st.est); drawInt(); return; }
       const est = st.est; save(); if (f.name) setTimeout(() => openAdjust(f.id, false, est), 260);
@@ -2228,13 +2254,37 @@ function openWalletForm(w, presetType) {
     if (!f.name) return toast('Isi nama akun', true);
     if (wt(f).g !== 'credit') f.limit = 0;
     if (wt(f).g !== 'invest') f.sub = '';
-    if (!INT_TYPES.includes(f.type) || !(f.rateBp > 0)) Object.assign(f, { rateBp:0, rateTax:false, rateFrom:'' });
-    else if (!(w && w.rateBp > 0) || !f.rateFrom) f.rateFrom = today(); // bunga mulai dihitung dari hari ini
+    if (!INT_TYPES.includes(f.type) || !(f.rateBp > 0)) Object.assign(f, { rateBp:0, rateTax:false, rateFrom:'', taxBp:0, taxMin:0 });
+    else {
+      f.taxBp = f.taxBp || 0; f.taxMin = f.taxBp > 0 ? f.taxMin || 0 : 0; f.rateTax = f.taxBp > 0;
+      // bunga terakhir dikreditkan = kemarin, jadi bunga hari ini langsung masuk
+      if (!(w && w.rateBp > 0) || !f.rateFrom) f.rateFrom = addDays(today(), -1);
+    }
     const o = Object.assign({}, f);
     closeSheet(el);
     persist([['saveWallet', o]], () => upsertLocal(D.wallets, o), edit ? 'Akun diperbarui' : 'Akun ditambahkan');
   }
   draw();
+}
+
+// Riwayat bunga harian satu akun: per hari saldo awal, bunga kotor, pajak, dan bunga bersih yang masuk.
+function openIntHist(id) {
+  const el = openSheet({ title:'Riwayat Bunga', left:'Tutup' });
+  el._refresh = () => {
+    const w = wal(id); if (!w) return closeSheet(el);
+    const L = sortTx(D.transactions.filter(t => isInt(t) && t.walletId === id));
+    const m = thisMonth(), sum = (A, k) => A.reduce((s, t) => s + (k === 'gross' ? t.amount + (t.fee || 0) : t[k] || 0), 0);
+    const M = L.filter(t => t.date.slice(0, 7) === m);
+    const groups = [];
+    L.slice(0, 400).forEach(t => { const k = t.date.slice(0, 7), g = groups[groups.length - 1]; if (g && g.k === k) g.items.push(t); else groups.push({ k, items:[t] }); });
+    el.body.innerHTML = `
+      <div class="strip"><div><small>Bersih bln ini</small><b class="inc">${money(sum(M, 'amount'))}</b></div><div><small>Pajak bln ini</small><b class="exp">${money(sum(M, 'fee'))}</b></div><div><small>Total bersih</small><b>${money(sum(L, 'amount'))}</b></div></div>
+      <p class="hint">${w.rateBp > 0 ? `Bunga kotor ${rateTxt(w.rateBp)} p.a.${w.taxBp > 0 ? `, pajak ${rateTxt(w.taxBp)} dari bunga kotor${w.taxMin ? ' bila saldo di atas ' + money(w.taxMin) : ''}` : ', tanpa pajak'}. Bunga dihitung dari saldo awal tiap hari dan masuk otomatis saat aplikasi dibuka.` : 'Bunga untuk akun ini sedang nonaktif.'}</p>
+      ${groups.length ? groups.map(g => `<div class="dh"><span>${monthName(g.k)}</span><b class="inc">+${money(sum(g.items, 'amount'))}</b></div>
+        <div class="group">${g.items.map(t => `<div class="ih"><span><b>${dateShort(t.date)}</b><small>Kotor ${money(t.amount + (t.fee || 0))}${t.fee ? ' · pajak ' + money(t.fee) : ''}</small></span><em class="inc">+${money(t.amount)}</em></div>`).join('')}</div>`).join('')
+        : `<div class="mt">${empty('coins', 'Belum ada bunga', 'Bunga pertama masuk saat aplikasi dibuka hari ini')}</div>`}`;
+  };
+  el._refresh();
 }
 
 // Koreksi saldo (akun biasa) atau update nilai pasar (investasi).
@@ -2663,7 +2713,7 @@ const Mock = (() => {
     const now = new Date().toISOString();
     const W = (id, name, type, color, initial, extra) => Object.assign({ id, name, type, color, initial, archived:false, order:+id.slice(1), createdAt:now, limit:0, sub:'' }, extra);
     const wallets = [
-      W('w1', 'Tunai', 'cash', '#22C55E', 450000), W('w2', 'BCA', 'bank', '#3B82F6', 6500000), W('w3', 'GoPay', 'ewallet', '#06B6D4', 120000), W('w11', 'SeaBank', 'bank', '#F97316', 9441333, { rateBp:375, rateTax:true, rateFrom:addDays(today(), -5) }), W('w12', 'DANA', 'ewallet', '#3B82F6', 350000),
+      W('w1', 'Tunai', 'cash', '#22C55E', 450000), W('w2', 'BCA', 'bank', '#3B82F6', 6500000), W('w3', 'GoPay', 'ewallet', '#06B6D4', 120000), W('w11', 'SeaBank', 'bank', '#F97316', 9441333, { rateBp:375, rateTax:true, taxBp:2000, taxMin:7500000, rateFrom:addDays(today(), -5) }), W('w12', 'DANA', 'ewallet', '#3B82F6', 350000),
       W('w4', 'Dana Darurat', 'saving', '#14B8A6', 15000000), W('w10', 'Liburan Jepang', 'saving', '#EC4899', 4200000),
       W('w5', 'BCA Card', 'credit', '#6366F1', -850000, { limit:10000000 }), W('w6', 'SPayLater', 'paylater', '#F97316', 0, { limit:3000000 }),
       W('w7', 'RDPU', 'invest', '#3B82F6', 10000000, { sub:'Reksadana' }), W('w8', 'Saham BBCA', 'invest', '#22C55E', 8000000, { sub:'Saham' }), W('w9', 'Obligasi FR', 'invest', '#A855F7', 5000000, { sub:'Obligasi' })
@@ -2737,30 +2787,29 @@ const Mock = (() => {
   }
   // salinan logika bunga harian di server (Code.gs: interestPlan_)
   function runInterest() {
-    const last = addDays(today(), -1);
+    const end = today();
     db.wallets.forEach(w => {
-      if (!(w.rateBp > 0) || w.archived || !w.rateFrom || w.rateFrom >= last || !INT_TYPES.includes(w.type)) return;
-      let start = addDays(w.rateFrom, 1), base = w.initial, before = 0, acc = 0;
-      const deltas = {};
+      fixWallet(w);
+      if (!(w.rateBp > 0) || w.archived || !w.rateFrom || w.rateFrom >= end || !INT_TYPES.includes(w.type)) return;
+      let base = w.initial, before = 0, acc = 0;
+      const start = addDays(w.rateFrom, 1), deltas = {};
       db.transactions.forEach(t => {
         let v = 0;
         if (t.type === 'income' && t.walletId === w.id) v = t.amount;
         else if (t.type === 'expense' && t.walletId === w.id) v = -t.amount;
         else if (t.type === 'transfer') v = (t.walletId === w.id ? -t.amount - (t.fee || 0) : 0) + (t.toWalletId === w.id ? t.amount : 0);
         if (!v) return;
-        if (t.categoryId === '__int' && t.walletId === w.id) before += v;
+        if (isInt(t) && t.walletId === w.id) before += v;
         else if (t.date < start) base += v; else deltas[t.date] = (deltas[t.date] || 0) + v;
       });
-      for (let d = start, n = 0; d <= last && n < 400; d = addDays(d, 1), n++) {
+      for (let d = start, n = 0; d <= end && n < 400; d = addDays(d, 1), n++) {
+        const it = dailyInterest(base + before + acc, w);
         base += deltas[d] || 0;
-        const amt = dailyInterest(base + before + acc, w.rateBp, w.rateTax); if (!amt) continue;
-        acc += amt;
-        const post = addDays(d, 1), id = 'int-' + w.id + '-' + post.slice(0, 7);
-        const cur = db.transactions.find(t => t.id === id);
-        if (cur) { cur.amount += amt; cur.date = post; }
-        else db.transactions.push({ id, date:post, type:'income', walletId:w.id, toWalletId:'', categoryId:'__int', amount:amt, fee:0, note:'Bunga harian', refId:'', createdAt:new Date().toISOString() });
+        if (!it.net) continue;
+        acc += it.net;
+        db.transactions.push({ id:'int-' + w.id + '-' + d, date:d, type:'income', walletId:w.id, toWalletId:'', categoryId:'__int', amount:it.net, fee:it.tax, note:'Bunga harian', refId:'', createdAt:new Date().toISOString() });
       }
-      w.rateFrom = last;
+      w.rateFrom = end;
     });
   }
   const F = {
