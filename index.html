@@ -103,7 +103,14 @@ b,.num{font-variant-numeric:tabular-nums}
 .hd{max-width:calc(520px + 2 * var(--gx));margin:0 auto;display:flex;align-items:center;gap:10px;padding:6px var(--px);min-height:52px}
 .hd h1{flex:1;text-align:center;font-size:19px;font-weight:600;letter-spacing:-.01em}
 .hside{width:40px;display:flex;justify-content:center;flex-shrink:0}
-.hbtn{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--text);background:var(--card)}
+.hbtn{position:relative;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--text);background:var(--card)}
+.hbtn .sync-badge{position:absolute;top:1px;right:1px;min-width:16px;height:16px;padding:0 4px;border-radius:99px;background:#F59E0B;color:#0C0D10;font-size:10px;font-weight:700;display:grid;place-items:center;line-height:1;pointer-events:none}
+.sync-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 12px;padding:9px 12px;border-radius:14px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.28);color:#F59E0B;font-size:12.5px;font-weight:500;cursor:pointer}
+.sync-bar.syncing{background:rgba(14,165,233,.12);border-color:rgba(14,165,233,.28);color:#0EA5E9}
+.sync-bar .sb-info{display:flex;align-items:center;gap:7px;min-width:0}
+.sync-bar .sb-info .i{flex-shrink:0}
+.sync-bar .sb-info span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sync-bar .sb-btn{flex-shrink:0;font-size:11.5px;font-weight:600;text-decoration:underline}
 .hbtn.plain{background:none}
 .hd.w2 .hside{width:84px;gap:4px}
 .hd.w2 .hside:first-child{justify-content:flex-start}
@@ -999,11 +1006,46 @@ function dueLabel(s) {
 const IS_GAS = typeof google !== 'undefined' && google.script && google.script.run;
 // Diisi oleh tools/build_web.py untuk versi GitHub Pages (kosong = Apps Script / preview lokal).
 const API_URL = 'https://script.google.com/macros/s/AKfycbyDLE5XUHq9xyGxzx4OFvnAH2jjlaLOm87SVkBpCWitWbua_0CduiBR3C98v11zKTTf9w/exec';
-function apiFetch(fn, args) {
-  return fetch(API_URL, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body:JSON.stringify({ fn, args, token:TOKEN }) })
-    .then(r => { if (!r.ok) throw new Error('Server tidak merespons (' + r.status + ')'); return r.json(); }, () => { throw new Error('Tidak ada koneksi internet'); })
-    .then(j => { if (!j.ok) throw new Error(j.error || 'Gagal'); return j.data; });
+
+function isNetworkError(e) {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return true;
+  const m = (e && e.message ? e.message : String(e)).toLowerCase();
+  return /koneksi|internet|offline|waktu habis|terputus|abort|network|failed to fetch|tidak merespons|timed out|500|502|503|504|load failed|networkerror/.test(m);
 }
+
+function apiFetch(fn, args, timeoutMs = 20000) {
+  const attempt = () => {
+    const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
+    return fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ fn, args, token: TOKEN }),
+      signal: ctrl ? ctrl.signal : undefined
+    })
+      .then(r => {
+        if (timer) clearTimeout(timer);
+        if (!r.ok) throw new Error('Server tidak merespons (' + r.status + ')');
+        return r.json();
+      }, e => {
+        if (timer) clearTimeout(timer);
+        if (e && e.name === 'AbortError') throw new Error('Koneksi terputus / waktu habis');
+        throw new Error('Tidak ada koneksi internet');
+      })
+      .then(j => {
+        if (!j.ok) throw new Error(j.error || 'Gagal');
+        return j.data;
+      });
+  };
+
+  return attempt().catch(e => {
+    if (isNetworkError(e)) {
+      return new Promise(r => setTimeout(r, 800)).then(() => attempt());
+    }
+    throw e;
+  });
+}
+
 // Token sesi dari server setelah PIN benar; hanya disimpan di memori.
 let TOKEN = '';
 function api(fn, ...args) {
@@ -1021,26 +1063,221 @@ function api(fn, ...args) {
     throw e;
   });
 }
-// Simpan optimis: tampilan langsung berubah, dibatalkan bila server gagal.
+
+// Antrean sinkronisasi offline (Outbox): data tersimpan aman di perangkat saat jaringan lambat/mati
+const QUEUE_KEY = 'dk_outbox_v2';
+let SYNC_QUEUE = [];
+let isFlushing = false;
+
+function loadSyncQueue() {
+  try {
+    const raw = localStorage.getItem(QUEUE_KEY);
+    SYNC_QUEUE = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(SYNC_QUEUE)) SYNC_QUEUE = [];
+  } catch (e) {
+    SYNC_QUEUE = [];
+  }
+}
+loadSyncQueue();
+
+function saveSyncQueue() {
+  try {
+    if (!SYNC_QUEUE.length) localStorage.removeItem(QUEUE_KEY);
+    else localStorage.setItem(QUEUE_KEY, JSON.stringify(SYNC_QUEUE));
+  } catch (e) {}
+  updateSyncUI();
+}
+
+function updateSyncUI() {
+  const b = $('#btn-sync');
+  if (b) {
+    let bd = b.querySelector('.sync-badge');
+    if (SYNC_QUEUE.length > 0) {
+      if (!bd) { bd = document.createElement('span'); bd.className = 'sync-badge'; b.appendChild(bd); }
+      bd.textContent = SYNC_QUEUE.length > 9 ? '9+' : SYNC_QUEUE.length;
+    } else if (bd) {
+      bd.remove();
+    }
+    b.classList.toggle('spinning', isFlushing);
+  }
+  const bar = $('#sync-bar');
+  if (bar) {
+    if (SYNC_QUEUE.length === 0) {
+      bar.style.display = 'none';
+    } else {
+      bar.style.display = 'flex';
+      const isOff = typeof navigator !== 'undefined' && !navigator.onLine;
+      bar.className = 'sync-bar' + (isFlushing ? ' syncing' : '');
+      const icon = isFlushing ? ic('refresh', 14) : isOff ? ic('wifi', 14) : ic('alert', 14);
+      const text = isFlushing
+        ? `Menyinkronkan ${SYNC_QUEUE.length} data ke Google Sheets...`
+        : isOff
+        ? `${SYNC_QUEUE.length} transaksi tersimpan di HP (offline)`
+        : `${SYNC_QUEUE.length} transaksi tersimpan di HP (menunggu jaringan)`;
+      bar.innerHTML = `<span class="sb-info">${icon}<span>${text}</span></span><span class="sb-btn">${isFlushing ? '' : 'Kirim sekarang'}</span>`;
+    }
+  }
+}
+
+async function flushSyncQueue(manual = false) {
+  if (isFlushing || !SYNC_QUEUE.length) {
+    updateSyncUI();
+    return;
+  }
+  if (!IS_LIVE()) {
+    SYNC_QUEUE = [];
+    saveSyncQueue();
+    return;
+  }
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    updateSyncUI();
+    if (manual) toast('Tidak ada koneksi internet · Data tersimpan aman di HP', true);
+    return;
+  }
+  isFlushing = true;
+  updateSyncUI();
+
+  let successCount = 0;
+  try {
+    while (SYNC_QUEUE.length > 0) {
+      const item = SYNC_QUEUE[0];
+      try {
+        for (const [fn, ...args] of item.calls) {
+          await api(fn, ...args);
+        }
+        SYNC_QUEUE.shift();
+        successCount++;
+        saveSyncQueue();
+      } catch (err) {
+        if (/SESI_HABIS/.test(err.message)) {
+          break;
+        }
+        if (isNetworkError(err)) {
+          item.retries = (item.retries || 0) + 1;
+          saveSyncQueue();
+          const delay = Math.min(30000, 2000 * Math.pow(1.4, item.retries));
+          setTimeout(() => flushSyncQueue(), delay);
+          if (manual) toast('Jaringan lambat · Akan dicoba lagi otomatis', true);
+          break;
+        }
+        console.warn('Gagal memproses item antrean:', err);
+        SYNC_QUEUE.shift();
+        saveSyncQueue();
+      }
+    }
+  } finally {
+    isFlushing = false;
+    saveCache();
+    updateSyncUI();
+    if (manual && successCount > 0 && SYNC_QUEUE.length === 0) {
+      toast('Semua data berhasil tersinkron ke Google Sheets');
+    }
+  }
+}
+
+// Rekonsiliasi data dari server dengan antrean mutasi lokal yang belum terkirim
+function reconcilePending(data) {
+  if (!data || !Array.isArray(data.transactions) || !SYNC_QUEUE.length) return data;
+  for (const item of SYNC_QUEUE) {
+    for (const [fn, arg] of item.calls) {
+      if (fn === 'saveTx' && arg && arg.id) {
+        upsertLocal(data.transactions, arg);
+      } else if (fn === 'deleteTx' && arg) {
+        data.transactions = data.transactions.filter(x => x.id !== arg);
+      } else if (fn === 'saveWallet' && arg && arg.id) {
+        upsertLocal(data.wallets, arg);
+      } else if (fn === 'deleteWallet' && arg) {
+        data.wallets = data.wallets.filter(x => x.id !== arg);
+      } else if (fn === 'saveRecurring' && arg && arg.id) {
+        upsertLocal(data.recurring, arg);
+      } else if (fn === 'deleteRecurring' && arg) {
+        data.recurring = data.recurring.filter(x => x.id !== arg);
+      } else if (fn === 'saveGoal' && arg && arg.id) {
+        upsertLocal(data.goals, arg);
+      } else if (fn === 'deleteGoal' && arg) {
+        data.goals = data.goals.filter(x => x.id !== arg);
+      } else if (fn === 'saveDebt' && arg && arg.id) {
+        upsertLocal(data.debts, arg);
+      } else if (fn === 'deleteDebt' && arg) {
+        data.debts = data.debts.filter(x => x.id !== arg);
+      } else if (fn === 'saveBudget' && arg && arg.id) {
+        upsertLocal(data.budgets, arg);
+      } else if (fn === 'deleteBudget' && arg) {
+        data.budgets = data.budgets.filter(x => x.id !== arg);
+      } else if (fn === 'saveSetting' && arg) {
+        if (data.settings) data.settings[arg] = item.calls[0][2];
+      }
+    }
+  }
+  return data;
+}
+
+// Simpan optimis: perubahan diterapkan seketika dan antrean disimpan ke storage lokal
 let mutated = false;
 async function persist(calls, apply, okMsg) {
-  const snap = JSON.stringify(D);
   mutated = true;
-  apply(); render();
-  if (okMsg) toast(okMsg);
-  try { for (const [fn, ...args] of calls) await api(fn, ...args); saveCache(); }
-  catch (e) { setData(JSON.parse(snap)); render(); toast(e.message || 'Gagal menyimpan', true); }
+  try {
+    apply();
+  } catch (err) {
+    console.error('Gagal menerapkan perubahan lokal:', err);
+  }
+  saveCache();
+  render();
+
+  const item = {
+    id: 'q_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+    calls: calls,
+    okMsg: okMsg || '',
+    createdAt: Date.now(),
+    retries: 0
+  };
+  SYNC_QUEUE.push(item);
+  saveSyncQueue();
+
+  if (okMsg) {
+    const isOff = typeof navigator !== 'undefined' && !navigator.onLine;
+    toast(isOff ? okMsg + ' (tersimpan offline di HP)' : okMsg);
+  }
+
+  flushSyncQueue();
 }
+
+function syncBanner() {
+  if (!SYNC_QUEUE.length) return '<div id="sync-bar" style="display:none"></div>';
+  const isOff = typeof navigator !== 'undefined' && !navigator.onLine;
+  const icon = isFlushing ? ic('refresh', 14) : isOff ? ic('wifi', 14) : ic('alert', 14);
+  const text = isFlushing
+    ? `Menyinkronkan ${SYNC_QUEUE.length} data ke Google Sheets...`
+    : isOff
+    ? `${SYNC_QUEUE.length} transaksi tersimpan di HP (offline)`
+    : `${SYNC_QUEUE.length} transaksi tersimpan di HP (menunggu jaringan)`;
+  return `<div id="sync-bar" class="sync-bar${isFlushing ? ' syncing' : ''}" data-act="refresh"><span class="sb-info">${icon}<span>${text}</span></span><span class="sb-btn">${isFlushing ? '' : 'Kirim sekarang'}</span></div>`;
+}
+
 // Cache data terakhir di HP agar aplikasi langsung tampil saat dibuka (data segar menyusul dari server).
-// Tidak dipakai bila PIN aktif, supaya data tidak terbaca tanpa PIN.
 const CACHE_KEY = 'dk_cache_v1';
+const SESSION_CACHE_KEY = 'dk_session_cache_v1';
 function saveCache() {
   try {
-    if (D.hasPin || !IS_LIVE()) return localStorage.removeItem(CACHE_KEY);
+    if (!IS_LIVE()) return localStorage.removeItem(CACHE_KEY);
+    if (D.hasPin) {
+      sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(D));
+      localStorage.removeItem(CACHE_KEY);
+      return;
+    }
     localStorage.setItem(CACHE_KEY, JSON.stringify(D));
   } catch (e) {}
 }
-function readCache() { try { const c = JSON.parse(localStorage.getItem(CACHE_KEY)); return c && !c.hasPin && Array.isArray(c.wallets) ? c : null; } catch (e) { return null; } }
+function readCache() {
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      const s = JSON.parse(sessionStorage.getItem(SESSION_CACHE_KEY));
+      if (s && Array.isArray(s.wallets)) return s;
+    }
+    const c = JSON.parse(localStorage.getItem(CACHE_KEY));
+    return c && !c.hasPin && Array.isArray(c.wallets) ? c : null;
+  } catch (e) { return null; }
+}
 const IS_LIVE = () => !!(API_URL || IS_GAS);
 const upsertLocal = (arr, o) => { const i = arr.findIndex(x => x.id === o.id); if (i >= 0) arr[i] = o; else arr.push(o); };
 
@@ -1102,6 +1339,7 @@ function vHome() {
   const bills = upcomingBills(7), ins = insights();
   const recent = sortTx(L.filter(t => !isInt(t))).slice(0, 15);
   return `
+  ${syncBanner()}
   <div class="periods">${PERIODS.map(([k, l]) => `<button class="${S.period === k ? 'on' : ''}" data-act="period" data-id="${k}">${l}</button>`).join('')}</div>
   <section class="hero">
     <div class="hero-cap">Total Saldo (IDR)<button data-act="eye" aria-label="Sembunyikan nominal">${ic(S.hide ? 'eyeOff' : 'eye', 17)}</button></div>
@@ -1536,8 +1774,9 @@ const MAIN = ['home', 'stats', 'wallets', 'profile'];
 function header(v) {
   if (v === 'home') {
     const n = D.settings.userName || '';
+    const badge = SYNC_QUEUE.length > 0 ? `<span class="sync-badge">${SYNC_QUEUE.length > 9 ? '9+' : SYNC_QUEUE.length}</span>` : '';
     return `<div class="hd"><div class="greet"><small>${greetWord()}</small><b>Hai, ${esc(n || 'Kamu')}!</b></div>
-      <button class="hbtn" data-act="refresh" id="btn-sync" aria-label="Sinkronkan">${ic('refresh', 19)}</button>
+      <button class="hbtn" data-act="refresh" id="btn-sync" aria-label="Sinkronkan">${ic('refresh', 19)}${badge}</button>
       <button class="avatar" data-act="tab" data-id="profile" aria-label="Profil">${esc(initials(n || 'K'))}</button></div>`;
   }
   const right = { wallets:`<button class="hbtn plain" data-act="addWallet" aria-label="Tambah akun">${ic('plus', 24)}</button>`,
@@ -2639,8 +2878,18 @@ function applyTheme() {
 }
 async function reload(quiet) {
   const b = $('#btn-sync'); if (b) b.classList.add('spinning');
-  try { setData(await api('getAll')); saveCache(); render(); if (!quiet) toast('Data tersinkron'); }
-  catch (e) { toast(e.message || 'Gagal memuat', true); render(); }
+  try {
+    if (SYNC_QUEUE.length) await flushSyncQueue(true);
+    const fresh = await api('getAll');
+    reconcilePending(fresh);
+    setData(fresh);
+    saveCache();
+    render();
+    if (!quiet) toast('Data tersinkron');
+  } catch (e) {
+    toast(e.message || 'Gagal memuat', true);
+    render();
+  }
 }
 
 function pinPad() {
@@ -2691,10 +2940,14 @@ function showLock(first) {
   bindPinPad(el, async (pin, fail, note) => {
     note('Memeriksa…');
     try {
-      setData(await api('unlock', pin));
+      const res = await api('unlock', pin);
+      reconcilePending(res);
+      setData(res);
+      saveCache();
       render();
       if (first) hideSplash();
       el.classList.add('out'); setTimeout(() => el.remove(), 260);
+      if (SYNC_QUEUE.length) flushSyncQueue();
     } catch (e) { fail(e.message || 'PIN salah'); }
   });
 }
@@ -2866,19 +3119,55 @@ fitScreen();
 window.addEventListener('resize', () => { fitScreen(); fitPWA(); });
 window.addEventListener('orientationchange', () => setTimeout(fitScreen, 300));
 function hideSplash() { const s = $('#splash'); if (!s) return; s.classList.add('out'); setTimeout(() => s.remove(), 300); }
+window.addEventListener('online', () => {
+  toast('Koneksi internet kembali · Menyinkronkan...');
+  flushSyncQueue();
+});
+window.addEventListener('offline', () => {
+  updateSyncUI();
+});
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && SYNC_QUEUE.length) flushSyncQueue();
+});
+window.addEventListener('focus', () => {
+  if (SYNC_QUEUE.length) flushSyncQueue();
+});
+
 async function start() {
   applyTheme(); drawNav();
   $('#sp-logo').innerHTML = ic('wallet', 30);
+  loadSyncQueue();
   const cached = IS_LIVE() ? readCache() : null;
-  if (cached) { setData(cached); render(); hideSplash(); }
+  if (cached) {
+    reconcilePending(cached);
+    setData(cached);
+    render();
+    hideSplash();
+  }
   try {
     const r = await api('boot');
-    if (r.hasPin) { try { localStorage.removeItem(CACHE_KEY); } catch (e) {} D.hasPin = true; showLock(true); return; }
-    if (cached && mutated) return reload(true); // ada perubahan selama memuat: ambil ulang setelah tersimpan
+    if (r.hasPin) {
+      try { localStorage.removeItem(CACHE_KEY); } catch (e) {}
+      D.hasPin = true;
+      showLock(true);
+      return;
+    }
+    if (r.data) {
+      reconcilePending(r.data);
+      setData(r.data);
+      saveCache();
+    }
     const sc = $('#scroll').scrollTop;
-    setData(r.data); saveCache(); render(); $('#scroll').scrollTop = sc; hideSplash();
+    render();
+    $('#scroll').scrollTop = sc;
+    hideSplash();
+    if (SYNC_QUEUE.length) flushSyncQueue();
   } catch (e) {
-    if (cached) return toast('Offline · menampilkan data terakhir', true);
+    if (cached) {
+      toast('Offline · menampilkan data terakhir', true);
+      updateSyncUI();
+      return;
+    }
     $('#sp-msg').innerHTML = `${esc(e.message || 'Gagal memuat')}<br><button class="btn" style="margin-top:12px" onclick="location.reload()">Coba lagi</button>`;
     const sp = document.querySelector('.spin'); if (sp) sp.remove();
   }
